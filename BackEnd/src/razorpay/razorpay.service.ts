@@ -4,17 +4,19 @@ import { Salt } from './schemas/salt.schema';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { Order } from 'src/order/schemas/order.schema';
+import { ConfigService } from '@nestjs/config';
 var Razorpay = require('razorpay')
 
 @Injectable()
 export class RazorpayService {
   constructor(@InjectModel(Salt.name) private saltModel: Model<Salt>,
-    @InjectModel(Order.name) private orderModel: Model<Order>) { }
+    @InjectModel(Order.name) private orderModel: Model<Order>,
+    private configService: ConfigService) { }
 
   async payment(body) {
     const razorpay = await new Razorpay({
-      key_id: "rzp_test_gYwgZTvcv9nNAh",
-      key_secret: "rdEK1klUAVW70iifGZtP1Scj",
+      key_id: this.configService.get<string>('RAZORPAY_ID'),
+      key_secret: this.configService.get<string>('RAZORPAY_SECRET'),
     });
 
 
@@ -51,8 +53,8 @@ export class RazorpayService {
 
   async fetchPaymentById(body) {
     var instance = new Razorpay({
-      key_id: "rzp_test_gYwgZTvcv9nNAh",
-      key_secret: "rdEK1klUAVW70iifGZtP1Scj",
+      key_id: this.configService.get<string>('RAZORPAY_ID'),
+      key_secret: this.configService.get<string>('RAZORPAY_SECRET'),
     })
     const saltSaved = await this.saltModel.findOne({ orderId: body.orderId })
     const saltOrRounds = 10;
@@ -81,8 +83,8 @@ export class RazorpayService {
 
   async fetchOrderById(body) {
     var instance = new Razorpay({
-      key_id: "rzp_test_gYwgZTvcv9nNAh",
-      key_secret: "rdEK1klUAVW70iifGZtP1Scj"
+      key_id: this.configService.get<string>('RAZORPAY_ID'),
+      key_secret: this.configService.get<string>('RAZORPAY_SECRET')
     })
 
     return await instance.orders.fetch(body.orderId)

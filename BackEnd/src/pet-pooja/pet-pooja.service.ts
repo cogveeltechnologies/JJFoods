@@ -1,3 +1,4 @@
+import { ConfigAPI } from './../../node_modules/@types/babel__core/index.d';
 import { WishlistService } from './../wishlist/wishlist.service';
 import { Wishlist } from './../wishlist/schemas/wishlist.schema';
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
@@ -5,12 +6,14 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { Connection, Model } from 'mongoose';
 import { FeedbackService } from 'src/feedback/feedback.service';
 import { Feedback } from 'src/feedback/schemas/feedback.schema';
+import { ConfigService } from '@nestjs/config';
 
 
 
 @Injectable()
 export class PetPoojaService {
-  constructor(@InjectConnection() private readonly connection: Connection, @InjectModel(Wishlist.name) private wishlistModel: Model<Wishlist>, @InjectModel(Feedback.name) private feedbackModel: Model<Feedback>, @Inject(forwardRef(() => FeedbackService)) private readonly feedbackService: FeedbackService, @Inject(forwardRef(() => WishlistService)) private readonly wishlistService: WishlistService) { }
+  constructor(@InjectConnection() private readonly connection: Connection, @InjectModel(Wishlist.name) private wishlistModel: Model<Wishlist>, @InjectModel(Feedback.name) private feedbackModel: Model<Feedback>, @Inject(forwardRef(() => FeedbackService)) private readonly feedbackService: FeedbackService, @Inject(forwardRef(() => WishlistService)) private readonly wishlistService: WishlistService,
+    private configService: ConfigService) { }
 
   async searchItems(query: string) {
     console.log('Search query:', query, typeof query);
@@ -169,9 +172,9 @@ export class PetPoojaService {
     // Define headers
     const headers = new Headers();
     headers.append('Content-Type', 'application/json');
-    headers.append('app-key', 'rbe4f7cmhgkyt956p8qdnx1woj30u2is');
-    headers.append('app-secret', '344c14cc1be345008418ea80abe9a69faa4bf214');
-    headers.append('access-token', '89e4b208c6f0fda02148cfaa90c122d1e9fa5de1');
+    headers.append('app-key', this.configService.get<string>('PETPOOJA_KEY'));
+    headers.append('app-secret', this.configService.get<string>('PETPOOJA_SECRET'));
+    headers.append('access-token', this.configService.get<string>('PETPOOJA_TOKEN'));
 
     // console.log("request")
 
@@ -498,9 +501,9 @@ export class PetPoojaService {
     const getSafeValue = (value, defaultValue = '') => value !== undefined && value !== null ? value.toString() : defaultValue;
 
     return {
-      app_key: "rbe4f7cmhgkyt956p8qdnx1woj30u2is",
-      app_secret: "344c14cc1be345008418ea80abe9a69faa4bf214",
-      access_token: "89e4b208c6f0fda02148cfaa90c122d1e9fa5de1",
+      app_key: this.configService.get<string>('PETPOOJA_KEY'),
+      app_secret: this.configService.get<string>('PETPOOJA_SECRET'),
+      access_token: this.configService.get<string>('PETPOOJA_TOKEN'),
       orderinfo: {
         OrderInfo: {
           Restaurant: {

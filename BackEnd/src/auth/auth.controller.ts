@@ -95,6 +95,7 @@ export class AuthController {
 
   @Delete('/deleteAddress/:id')
   deleteAddress(@Param('id') id: string, @Body() body) {
+    console.log(body, id)
 
     return this.authService.deleteAddress(id, body.userId)
   }

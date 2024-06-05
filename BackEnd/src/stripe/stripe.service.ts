@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { StripeDto } from './dtos/stripe.dto';
+import { ConfigService } from '@nestjs/config';
 
-const stripe = require('stripe')('sk_test_51P8d8QSA6deqhATd0ob3Ohu23ku9H7O4JBscejmZUkqzTl9EFStuJPA1VJnW3wmSVSUZSX9acesRt4F8eXZJs7SV00sPZZNuo3')
+
 @Injectable()
 export class StripeService {
+
+  constructor(private configService: ConfigService) { }
+
+  stripe = require('stripe')(this.configService.get<string>('STRIPE'));
 
   failed() {
     return 'failed'
@@ -25,7 +30,7 @@ export class StripeService {
 
     // const couponId = '66503e8f4737426beb4a4c20';
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",

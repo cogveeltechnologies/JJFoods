@@ -193,7 +193,20 @@ export class OrderService {
   // }
 
   async getOrdersByCustomerId(userId, state) {
-    const response = await this.orderModel.find({ user: userId, state: state }).exec();
+    // const response = await this.orderModel.find({ user: userId, state: state }).exec();
+    // return response;
+    let queryStates;
+    if (state === 'running') {
+      queryStates = ['processing', 'ready', 'on the way', 'pending'];
+    } else if (state === 'history') {
+      queryStates = ['completed', 'cancelled'];
+    } else {
+      // If the state doesn't match 'running' or 'history', return an empty array or handle accordingly
+      return [];
+    }
+
+    // Query the database with the mapped states
+    const response = await this.orderModel.find({ user: userId, state: { $in: queryStates } }).exec();
     return response;
   }
 

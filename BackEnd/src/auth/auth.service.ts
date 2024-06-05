@@ -11,6 +11,7 @@ import { UpdateProfileOtpDto } from './dtos/updateProfileOtp.dto';
 import { UpdateProfileDto } from './dtos/updateProfile.dto';
 import { Address } from './schemas/address.schema';
 import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 const admin = require("../utils/firebase/firebaseInit")
 const axios = require('axios');
 @Injectable()
@@ -19,14 +20,15 @@ export class AuthService {
     @InjectModel(SignupOtp.name) private signupOtpModel: Model<SignupOtp>,
     @InjectModel(Address.name) private addressModel: Model<Address>,
     private readonly mailerService: MailerService,
-    private readonly httpService: HttpService) {
+    private readonly httpService: HttpService,
+    private configService: ConfigService) {
 
   }
   bucket = admin.storage().bucket();
   sendMail(email: string, otp: number): void {
     this.mailerService.sendMail({
       to: email,
-      from: 'husbanraina123@gmail.com',
+      from: this.configService.get<string>('EMAIL'),
       subject: 'Welcome!!!',
       text: 'welcome',
       html: `<b>Your otp is ${otp}</b>`
@@ -38,7 +40,7 @@ export class AuthService {
 
   smsGatewayOtp(body) {
     // Replace the placeholders with actual values
-    const apiKey = 'fcd66483-72d5-11eb-a9bc-0200cd936042';
+    const apiKey = this.configService.get<string>('SMS_KEY');
     const phoneNumber = body.phoneNumber;
     const otp = body.otp;
     const templateName = 'OTP1';
@@ -66,7 +68,7 @@ export class AuthService {
   }
 
   async smsGatewayVerify(body) {
-    const apiKey = 'fcd66483-72d5-11eb-a9bc-0200cd936042';
+    const apiKey = this.configService.get<string>('SMS_KEY');
     const phoneNumber = body.phoneNumber;
     const otp = body.otp;
 
@@ -386,6 +388,7 @@ export class AuthService {
   // address
 
   async addAddress(addressDto: any) {
+    // console.log("smsssssskeyyyyyy", this.configService.get<string>('SMS_KEY'))
     console.log(addressDto)
     if (addressDto.isDefault) {
 
@@ -412,7 +415,7 @@ export class AuthService {
 
     }
     const updatedAddress = await this.addressModel.findOneAndUpdate({ _id: id }, updateAddressDto, { new: true });
-    return updatedAddress
+    return await this.getAddresses(updatedAddress.user)
   }
 
   async deleteAddress(id, userId) {
