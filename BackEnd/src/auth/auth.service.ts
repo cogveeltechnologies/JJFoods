@@ -43,10 +43,11 @@ export class AuthService {
     const apiKey = this.configService.get<string>('SMS_KEY');
     const phoneNumber = body.phoneNumber;
     const otp = body.otp;
-    const templateName = 'OTP1';
+    const templateName = 'OTP';
 
     // Construct the URL
     const url = `https://2factor.in/API/V1/${apiKey}/SMS/${phoneNumber}/${otp}/${templateName}`;
+    // https://2factor.in/API/V1/fcd66483-72d5-11eb-a9bc-0200cd936042/SMS/8803005904/12345/OTP
 
     // Make the GET request using fetch
     fetch(url, {

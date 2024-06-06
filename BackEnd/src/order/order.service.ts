@@ -10,6 +10,7 @@ import { User } from 'src/auth/schemas/user.schema';
 import { Address } from 'src/auth/schemas/address.schema';
 import { PetPoojaService } from 'src/pet-pooja/pet-pooja.service';
 import { RazorpayService } from 'src/razorpay/razorpay.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class OrderService {
@@ -22,7 +23,8 @@ export class OrderService {
     private readonly couponService: CouponService,
     @Inject(PetPoojaService)
     private readonly petPoojaService: PetPoojaService,
-    @Inject(RazorpayService) private readonly razorpayService: RazorpayService) { }
+    @Inject(RazorpayService) private readonly razorpayService: RazorpayService,
+    private configService: ConfigService) { }
 
   async createOrder(body) {
     const { userId, orderPreference } = body;
@@ -132,7 +134,7 @@ export class OrderService {
     else {
       const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody)
 
-      console.log(petPoojaOrder.restID)
+      // console.log(petPoojaOrder.restID)
 
 
       const newOrderBody = { ...orderBody, petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID } }
@@ -162,8 +164,9 @@ export class OrderService {
       const user = await this.userModel.findById(userId)
 
       return {
-        key: "rzp_test_gYwgZTvcv9nNAh",
-        amount: parseFloat(orderBody.grandTotal) * 100,
+        order: order._id,
+        key: this.configService.get<string>('RAZORPAY_ID'),
+        amount: parseFloat(orderBody.grandTotal),
         name: "JJFOODS",
         description: "wazwan",
         currency: "INR",
@@ -208,6 +211,12 @@ export class OrderService {
     // Query the database with the mapped states
     const response = await this.orderModel.find({ user: userId, state: { $in: queryStates } }).exec();
     return response;
+  }
+
+  async getOrdersByCustomerIdAdmin(user, state) {
+    const response = await this.orderModel.find({ user, state }).exec();
+    // return response;
+
   }
 
   async getOrderById(orderId: string) {

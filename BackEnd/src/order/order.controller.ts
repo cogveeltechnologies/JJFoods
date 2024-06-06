@@ -27,6 +27,12 @@ export class OrderController {
     return this.orderService.getOrdersByCustomerId(body.userId, body.state);
   }
 
+  @Post('admin/user')
+  async getOrdersByCustomerIdAdmin(@Body() body) {
+    //completed or processing
+    return this.orderService.getOrdersByCustomerIdAdmin(body.userId, body.state);
+  }
+
   @Get(':orderId')
   async getOrderById(@Param('orderId') orderId: string) {
     return this.orderService.getOrderById(orderId);

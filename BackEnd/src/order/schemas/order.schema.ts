@@ -66,7 +66,8 @@ export class Order {
       paymentMethod: { type: String },
       paymentId: { type: String },
       status: { type: Boolean },
-      orderId: { type: String }
+      orderId: { type: String },
+      signature: { type: String }
     }
 
 
@@ -76,6 +77,7 @@ export class Order {
     paymentMethod: string;
     paymentId: string;
     status: boolean;
+    signature: string;
 
   };
   @Prop({

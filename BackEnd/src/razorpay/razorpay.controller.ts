@@ -12,6 +12,7 @@ export class RazorpayController {
 
   @Post('/fetchPaymentById')
   async fetchPaymentById(@Body() body) {
+    console.log("api--------------------------------------------------------------------------------------", body)
     return this.razorpayService.fetchPaymentById(body)
   }
 
