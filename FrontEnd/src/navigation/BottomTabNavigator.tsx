@@ -8,6 +8,7 @@ import Locationscreen from '../domains/app/screens/map/LocationScreen'
 import OrdersNavigator from './OrdersNavigator'
 import MyCart from '../domains/app/screens/cart/MyCart'
 import { useAppSelector } from '../store/hooks'
+import UpdateAddress from '../domains/app/screens/addressDetails/UpdateAddress'
 
 
 const BottomTabNavigator = () => {
@@ -56,9 +57,9 @@ const BottomTabNavigator = () => {
         name='MyCart'
         component={MyCart}
       />
-      {/* {!isGuest && <BottomTabs.Screen
-        name='LocationScreen'
-        component={Locationscreen}
+      {/* {<BottomTabs.Screen
+        name='UpdateAddress'
+        component={UpdateAddress}
       // options={{ headerShown: false, }}
       />} */}
       <BottomTabs.Screen

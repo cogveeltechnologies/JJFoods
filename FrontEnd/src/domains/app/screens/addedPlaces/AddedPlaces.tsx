@@ -16,13 +16,6 @@ const AddedPlaces = () => {
   const background = require("../../../../../assets/images/fullbackground.png")
   const navigation = useNavigation<any>()
 
-  const handleEdit = () => {
-    console.log('Edit')
-  };
-
-  const handleDelete = () => {
-    console.log('Deleted')
-  };
   const handleSelect = (item: any) => {
     console.log('Selected Address:', item);
   };
@@ -63,9 +56,6 @@ const AddedPlaces = () => {
             style={[textVariants.textSubHeading,
             { paddingVertical: 16, marginHorizontal: 8 }]}>Saved Addresses</Text>
           <AddedPlacesCard
-            // addressData={demoAddresses}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
             handleSelect={handleSelect}
           />
         </>
