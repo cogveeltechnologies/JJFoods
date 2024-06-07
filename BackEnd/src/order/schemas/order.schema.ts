@@ -14,7 +14,8 @@ export class Order {
   products: [{
     itemId: string,
     price: number,
-    quantity: number
+    quantity: number,
+    details?: any;
   }];
 
   @Prop()

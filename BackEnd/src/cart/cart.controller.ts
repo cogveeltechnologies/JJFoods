@@ -33,11 +33,16 @@ export class CartController {
     return cartNumber;
   }
 
-  @Post('remove')
-  async removeCart(@Body() body: any) {
+  @Post('removeItem')
+  async removeCartItem(@Body() body: any) {
 
-    const cart = await this.cartService.removeCart(body);
+    const cart = await this.cartService.removeCartItem(body);
     return cart;
+  }
+
+  @Post('remove')
+  async removeCart(@Body() body) {
+    const cart = await this.cartService.removeCart(body)
   }
 
   @Put('addQuantity')

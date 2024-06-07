@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Order } from './schemas/order.schema';
-import { Model } from 'mongoose';
+import { Connection, Model } from 'mongoose';
 import { Cart } from 'src/cart/schemas/cart.schema';
 import { CartService } from 'src/cart/cart.service';
 import { Coupon } from 'src/coupon/schemas/coupon.schema';
@@ -24,7 +24,8 @@ export class OrderService {
     @Inject(PetPoojaService)
     private readonly petPoojaService: PetPoojaService,
     @Inject(RazorpayService) private readonly razorpayService: RazorpayService,
-    private configService: ConfigService) { }
+    private configService: ConfigService,
+    @InjectConnection() private connection: Connection,) { }
 
   async createOrder(body) {
     const { userId, orderPreference } = body;
@@ -181,6 +182,7 @@ export class OrderService {
       }
     }
     else {
+      await this.cartService.removeCart({ userId: order.user })
 
       return order
     }
@@ -209,8 +211,22 @@ export class OrderService {
     }
 
     // Query the database with the mapped states
-    const response = await this.orderModel.find({ user: userId, state: { $in: queryStates } }).exec();
-    return response;
+    const orders = await this.orderModel.find({ user: userId, state: { $in: queryStates } }).exec();
+    // return response;
+    for (const order of orders) {
+      for (const product of order.products) {
+
+        const item = await this.connection.db.collection('items').findOne({ itemid: product.itemId });
+
+
+        if (item) {
+          product.details = item
+
+        }
+      }
+    }
+    console.log(orders)
+    return orders;
   }
 
   async getOrdersByCustomerIdAdmin(user, state) {

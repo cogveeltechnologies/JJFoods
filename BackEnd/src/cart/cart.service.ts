@@ -138,7 +138,7 @@ export class CartService {
 
     }
   }
-  async removeCart(body) {
+  async removeCartItem(body) {
     const { userId } = body;
     const { itemId } = body.product;
     const cart = await this.cartModel.findOne({
@@ -163,6 +163,12 @@ export class CartService {
       throw new Error("item not found");
     }
   };
+
+  async removeCart(body) {
+    const { userId } = body;
+    const response = await this.cartModel.findOneAndDelete({ user: userId });
+    return response
+  }
 
   async addQuantity(body) {
     const { userId } = body;

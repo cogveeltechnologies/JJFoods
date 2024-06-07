@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { Order } from 'src/order/schemas/order.schema';
 import { ConfigService } from '@nestjs/config';
 import { PetPoojaService } from 'src/pet-pooja/pet-pooja.service';
+import { CartService } from 'src/cart/cart.service';
 var Razorpay = require('razorpay')
 
 @Injectable()
@@ -13,7 +14,8 @@ export class RazorpayService {
   constructor(@InjectModel(Salt.name) private saltModel: Model<Salt>,
     @InjectModel(Order.name) private orderModel: Model<Order>,
     private configService: ConfigService,
-    @Inject(PetPoojaService) private readonly petPoojaService: PetPoojaService) { }
+    @Inject(PetPoojaService) private readonly petPoojaService: PetPoojaService,
+    @Inject(CartService) private readonly cartService: CartService) { }
 
   async payment(body) {
     const razorpay = await new Razorpay({
@@ -56,6 +58,7 @@ export class RazorpayService {
   };
 
   async fetchPaymentById(body) {
+    console.log("fetch payment by id body", body)
     var instance = new Razorpay({
       key_id: this.configService.get<string>('RAZORPAY_ID'),
       key_secret: this.configService.get<string>('RAZORPAY_SECRET'),
@@ -88,6 +91,7 @@ export class RazorpayService {
 
 
     const razorpayResponse = await instance.payments.fetch(rPaymentId)
+    console.log("razorpay response", razorpayResponse)
     const rPassword = razorpayResponse.amount / 100 + body.orderId;
     const isMatchR = await bcrypt.compare(rPassword, saltSaved.salt);
 
@@ -158,11 +162,25 @@ export class RazorpayService {
       await order.save();
 
       //cart empty
+      await this.cartService.removeCart({ userId: order.user })
+
+
 
       return { message: "done" }
 
 
     }
+
+    //change order status
+    order.state = "processing"
+
+    //razorpay 
+    //save razorpay details in order 
+    order.payment.paymentId = rPaymentId
+    order.payment.signature = rSignature
+    await order.save()
+
+
 
     return { error: "error" }
 
