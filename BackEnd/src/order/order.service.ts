@@ -193,6 +193,13 @@ export class OrderService {
     return this.orderModel.findByIdAndUpdate(orderId, { state: newState, updatedAt: Date.now() }, { new: true }).exec();
   }
 
+  async updateOrderStateCod(orderId: string) {
+    return this.orderModel.findByIdAndUpdate(orderId, { state: "processing", updatedAt: Date.now() }, { new: true }).exec();
+
+    //petpooja
+
+  }
+
   // async updateOrderStatus(orderId: string, newStatus: string) {
   //   return this.orderModel.findByIdAndUpdate(orderId, { status: newStatus, updatedAt: Date.now() }, { new: true }).exec();
   // }
