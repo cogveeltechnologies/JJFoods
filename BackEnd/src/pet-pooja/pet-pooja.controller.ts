@@ -33,8 +33,8 @@ export class PetPoojaController {
     }
   }
   @Get('search')
-  async search(@Query('q') query) {
-    return this.petPoojaService.searchItems(query);
+  async search(@Query('q') q) {
+    return this.petPoojaService.searchItems(q);
   }
 
   @Post('/:id')

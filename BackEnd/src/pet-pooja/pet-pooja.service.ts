@@ -40,6 +40,9 @@ export class PetPoojaService {
       // { $or: [ { <expression1> }, { <expression2> }, ... , { <expressionN> } ] }
 
       console.log('MongoDB query:', JSON.stringify(keyword, null, 2));
+      if (!keyword) {
+        return []
+      }
       const result = await this.connection.collection('items').find(keyword).toArray();
       console.log('Search results:', result);
       return result;
