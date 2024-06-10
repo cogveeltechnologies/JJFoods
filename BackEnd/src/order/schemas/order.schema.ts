@@ -68,7 +68,8 @@ export class Order {
       paymentId: { type: String },
       status: { type: Boolean },
       orderId: { type: String },
-      signature: { type: String }
+      signature: { type: String },
+      reason: { type: String }
     }
 
 
@@ -79,6 +80,7 @@ export class Order {
     paymentId: string;
     status: boolean;
     signature: string;
+    reason: string;
 
   };
   @Prop({
@@ -94,6 +96,27 @@ export class Order {
     restId: string
   }
 
+  @Prop({
+    type: {
+      type: Boolean,
+      required: true, // Assuming type is required, set to false if not
+      default: false
+    },
+    orderDate: {
+      type: String,
+      required: false
+
+    },
+    orderTime: {
+      type: String,
+      required: false,
+    },
+  })
+  preOrder: {
+    type: boolean;
+    orderDate?: string;
+    orderTime?: string;
+  };
 
 
 

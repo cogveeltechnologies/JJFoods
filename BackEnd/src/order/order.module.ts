@@ -11,9 +11,10 @@ import { AddressSchema } from 'src/auth/schemas/address.schema';
 import { PetPoojaModule } from 'src/pet-pooja/pet-pooja.module';
 import { PetPoojaService } from 'src/pet-pooja/pet-pooja.service';
 import { RazorpayModule } from 'src/razorpay/razorpay.module';
+import { FeedbackModule } from 'src/feedback/feedback.module';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: 'Order', schema: OrderSchema }, { name: "Cart", schema: CartSchema }, { name: 'Coupon', schema: CouponSchema }, { name: 'User', schema: OrderSchema }, { name: "Address", schema: AddressSchema }]), CartModule, CouponModule, PetPoojaModule, forwardRef(() => RazorpayModule)],
+  imports: [MongooseModule.forFeature([{ name: 'Order', schema: OrderSchema }, { name: "Cart", schema: CartSchema }, { name: 'Coupon', schema: CouponSchema }, { name: 'User', schema: OrderSchema }, { name: "Address", schema: AddressSchema }]), CartModule, CouponModule, PetPoojaModule, forwardRef(() => RazorpayModule), FeedbackModule],
   providers: [OrderService],
   controllers: [OrderController],
   exports: [OrderService]

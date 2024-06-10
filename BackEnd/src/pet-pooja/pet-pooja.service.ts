@@ -16,9 +16,14 @@ export class PetPoojaService {
     private configService: ConfigService) { }
 
   async searchItems(query: string) {
-    console.log('Search query:', query, typeof query);
+    // console.log('Search query:', query, typeof query);
     try {
       const sanitizedQuery = query.trim();
+
+      if (sanitizedQuery.length < 4) {
+        return []
+      }
+
       const keyword = sanitizedQuery ? {
         $or: [
           {
@@ -39,15 +44,15 @@ export class PetPoojaService {
       } : {};
       // { $or: [ { <expression1> }, { <expression2> }, ... , { <expressionN> } ] }
 
-      console.log('MongoDB query:', JSON.stringify(keyword, null, 2));
+      // console.log('MongoDB query:', JSON.stringify(keyword, null, 2));
       if (!keyword) {
         return []
       }
       const result = await this.connection.collection('items').find(keyword).toArray();
-      console.log('Search results:', result);
+      // console.log('Search results:', result);
       return result;
     } catch (error) {
-      console.error('Error executing search query:', error);
+      // console.error('Error executing search query:', error);
       return [];
     }
   }
@@ -530,8 +535,8 @@ export class PetPoojaService {
           Order: {
             details: {
               orderID: getSafeValue(order._id),
-              preorder_date: new Date(order.createdAt).toISOString().split('T')[0],
-              preorder_time: new Date(order.createdAt).toISOString().split('T')[1].split('.')[0],
+              preorder_date: getSafeValue(order.preOrder?.orderDate) ? getSafeValue(order.preOrder?.orderDate) : new Date(order.createdAt).toISOString().split('T')[0],
+              preorder_time: getSafeValue(order.preOrder?.orderTime) ? getSafeValue(order.preOrder?.orderTime) : new Date(order.createdAt).toISOString().split('T')[1].split('.')[0],
               service_charge: '0',
               sc_tax_amount: '0',
               delivery_charges: getSafeValue(order.deliveryFee, '0'),

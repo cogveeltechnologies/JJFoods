@@ -7,7 +7,9 @@ import { Review } from './schemas/review.schema';
 @Injectable()
 export class FeedbackService {
   constructor(@InjectModel(Feedback.name) private feedbackModel: Model<Feedback>,
-    @InjectModel(Review.name) private reviewModel: Model<Review>) {
+    @InjectModel(Review.name) private reviewModel: Model<Review>
+
+  ) {
 
   }
 
@@ -22,13 +24,13 @@ export class FeedbackService {
     const existingRating = await this.feedbackModel.findOne({ user: body.userId, itemId: body.itemId });
     if (existingRating) {
       //update
-      const updatedRating = await this.feedbackModel.findOneAndUpdate({ user: body.userId, itemId: body.itemId }, body, { new: true });
+      const updatedRating = await this.feedbackModel.findOneAndUpdate({ user: body.userId, itemId: body.itemId }, { feedback: body.feedback, rating: body.rating }, { new: true });
 
       return updatedRating;
     }
     else {
       //create
-      const newRating = new this.feedbackModel(body);
+      const newRating = new this.feedbackModel({ ...body, user: body.userId });
       await newRating.save();
       return newRating;
     }
