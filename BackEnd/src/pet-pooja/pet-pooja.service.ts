@@ -19,6 +19,11 @@ export class PetPoojaService {
     // console.log('Search query:', query, typeof query);
     try {
       const sanitizedQuery = query.trim();
+
+      if (sanitizedQuery.length < 4) {
+        return []
+      }
+
       const keyword = sanitizedQuery ? {
         $or: [
           {
