@@ -29,10 +29,12 @@ export class OrderService {
 
   async createOrder(body) {
     const { userId, orderPreference } = body;
-    // if (!userId) {
-    //   console.log("user id not found")
-    // }
+    if (!userId) {
+      console.log("user id not found")
+    }
     const { couponId } = body.discount;
+
+    const { type, orderDate, orderTime } = body.preOrder;
 
     // const userCartDocument = await this.cartModel.findOne({ user: userId })
     const deliveryFee = 0;
@@ -95,6 +97,11 @@ export class OrderService {
         paymentId: body.payment?.paymentId,
         status: false
       },
+      preOrder: {
+        type,
+        orderDate,
+        orderTime
+      },
       createdAt: new Date(),
       updatedAt: new Date()
 
@@ -122,6 +129,11 @@ export class OrderService {
         paymentId: body.payment?.paymentId,
         status: false
       },
+      preOrder: {
+        type,
+        orderDate,
+        orderTime
+      },
       createdAt: new Date(),
       updatedAt: new Date()
 
@@ -133,16 +145,19 @@ export class OrderService {
       await order.save();
     }
     else {
-      const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody)
+
+      // make order only after admin accepts
+
+      // const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody)
 
       // console.log(petPoojaOrder.restID)
 
 
-      const newOrderBody = { ...orderBody, petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID } }
+      // const newOrderBody = { ...orderBody, petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID } }
 
 
 
-      order = new this.orderModel(newOrderBody);
+      order = new this.orderModel(orderBody);
       await order.save();
     }
 
@@ -194,9 +209,58 @@ export class OrderService {
   }
 
   async updateOrderStateCod(orderId: string) {
-    await this.orderModel.findByIdAndUpdate(orderId, { state: "processing", updatedAt: Date.now() }, { new: true }).exec();
+    const order = await this.orderModel.findByIdAndUpdate(orderId, { state: "processing", updatedAt: Date.now() }, { new: true }).exec();
 
-    //petpooja
+    const petPoojaOrderBody = {
+      user: await this.userModel.findOne({ _id: order.user }),
+      products: order.products,
+      cgst: order.cgst,
+      sgst: order.sgst,
+      discount: {
+        couponId: order.discount.couponId,
+        discount: order.discount.discount
+      },
+      itemsTotal: order.itemsTotal,
+      grandTotal: order.grandTotal,
+      deliveryFee: order.deliveryFee,
+      platformFee: 15,
+      orderPreference: order.orderPreference,
+      address: order.address ? await this.addressModel.findOne({ _id: order.address }) : undefined,
+
+      payment: {
+        paymentMethod: order.payment.paymentMethod,
+        paymentId: order.payment.paymentId,
+        status: order.payment.status
+      },
+      preOrder: {
+        type: order.preOrder.type,
+        orderDate: order.preOrder.orderDate,
+        orderTime: order.preOrder.orderTime
+      },
+      createdAt: order.createdAt,
+      updatedAt: new Date()
+    };
+
+    const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody);
+
+    await this.orderModel.findByIdAndUpdate(orderId, {
+      petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID },
+      updatedAt: Date.now()
+    }, { new: true }).exec();
+    // const order = await this.orderModel.findByIdAndUpdate(orderId, { state: "processing", updatedAt: Date.now() }, { new: true }).exec();
+
+    // //petpooja
+    // const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody)
+
+    //   // console.log(petPoojaOrder.restID)
+
+
+    //   const newOrderBody = { ...orderBody, petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID } }
+
+
+
+    //   order = new this.orderModel(newOrderBody);
+    //   await order.save();
 
 
   }

@@ -39,10 +39,10 @@ export class PetPoojaController {
 
   @Post('/:id')
   async getItemById(@Param('id') id: string, @Body() body) {
-    console.log("body", body)
+    // console.log("body", body)
     const response = await this.petPoojaService.getItemById(id, body.userId)
 
-    console.log(response)
+    // console.log(response)
     return response;
 
   }
