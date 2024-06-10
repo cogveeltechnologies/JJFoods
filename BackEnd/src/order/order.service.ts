@@ -11,6 +11,7 @@ import { Address } from 'src/auth/schemas/address.schema';
 import { PetPoojaService } from 'src/pet-pooja/pet-pooja.service';
 import { RazorpayService } from 'src/razorpay/razorpay.service';
 import { ConfigService } from '@nestjs/config';
+import { FeedbackService } from 'src/feedback/feedback.service';
 
 @Injectable()
 export class OrderService {
@@ -25,7 +26,8 @@ export class OrderService {
     private readonly petPoojaService: PetPoojaService,
     @Inject(RazorpayService) private readonly razorpayService: RazorpayService,
     private configService: ConfigService,
-    @InjectConnection() private connection: Connection,) { }
+    @InjectConnection() private connection: Connection,
+    @Inject(FeedbackService) private feedbackService: FeedbackService) { }
 
   async createOrder(body) {
     const { userId, orderPreference } = body;
@@ -295,6 +297,9 @@ export class OrderService {
           product.details = item
 
         }
+        const rating = await this.feedbackService.getRating(product.itemId)
+
+        product.details.rating = rating;
       }
     }
     console.log(orders)
