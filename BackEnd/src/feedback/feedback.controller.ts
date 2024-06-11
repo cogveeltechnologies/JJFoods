@@ -7,6 +7,19 @@ export class FeedbackController {
 
 
   }
+
+  @Post('/orderItemRating')
+  async createOrderItemRating(@Body() body) {
+    console.log(body)
+
+    return this.feedbackService.createOrderItemRating(body)
+  }
+
+  @Post('/getOrderItemRating')
+  async getOrderItemRating(@Body() body) {
+
+    return this.feedbackService.getOrderItemRating(body)
+  }
   @Get('/:id')
   getRating(@Param('id') id) {
 

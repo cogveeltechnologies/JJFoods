@@ -15,6 +15,11 @@ export class AuthController {
     private authService: AuthService
   ) { }
 
+  @Post('/check')
+  check(@Body() body) {
+    return this.authService.check(body)
+  }
+
   @Post('/signupOtp')
   signupOtp(@Body() signupOtpDto: SignupOtpDto) {
     console.log(signupOtpDto)

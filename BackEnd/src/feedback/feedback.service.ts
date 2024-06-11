@@ -1,13 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { Feedback } from './schemas/feedback.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Review } from './schemas/review.schema';
+import { RatingOrder } from './schemas/ratingOrder.schema';
+import { OrderService } from 'src/order/order.service';
 
 @Injectable()
 export class FeedbackService {
   constructor(@InjectModel(Feedback.name) private feedbackModel: Model<Feedback>,
-    @InjectModel(Review.name) private reviewModel: Model<Review>
+    @InjectModel(Review.name) private reviewModel: Model<Review>,
+    @InjectModel(RatingOrder.name) private ratingOrderModel: Model<RatingOrder>,
+    @Inject(forwardRef(() => OrderService)) private orderService: OrderService
 
   ) {
 
@@ -18,6 +22,28 @@ export class FeedbackService {
     await review.save();
     return review;
 
+  }
+
+  async createOrderItemRating(body) {
+    const newRating = new this.ratingOrderModel({ ...body, user: body.userId, order: body.orderId });
+    await newRating.save();
+
+    delete body.orderId
+
+    await this.createOrUpdateRating(body)
+    return await this.orderService.getOrderByCustomerId(body.userId, body.orderId)
+
+  }
+
+  async getOrderItemRating(body) {
+
+    const rating = await this.ratingOrderModel.findOne({ order: body.orderId, itemId: body.itemId });
+    console.log("feedbackRating", rating)
+    if (rating) {
+
+      return rating.rating
+    }
+    return 0;
   }
   async createOrUpdateRating(body) {
 

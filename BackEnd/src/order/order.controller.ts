@@ -30,6 +30,12 @@ export class OrderController {
     return this.orderService.getOrdersByCustomerId(body.userId, body.state);
   }
 
+  @Post('/user/order')
+  async getOrderByCustomerId(@Body() body) {
+    console.log(body)
+    return this.orderService.getOrderByCustomerId(body.userId, body.orderId)
+  }
+
   @Post('admin/user')
   async getOrdersByCustomerIdAdmin(@Body() body) {
     //completed or processing

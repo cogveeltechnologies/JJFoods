@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Order } from './schemas/order.schema';
 import { Connection, Model } from 'mongoose';
@@ -22,12 +22,12 @@ export class OrderService {
     @InjectModel(Coupon.name) private couponModel: Model<Coupon>,
     @Inject(CouponService)
     private readonly couponService: CouponService,
-    @Inject(PetPoojaService)
+    @Inject(forwardRef(() => PetPoojaService))
     private readonly petPoojaService: PetPoojaService,
     @Inject(RazorpayService) private readonly razorpayService: RazorpayService,
     private configService: ConfigService,
     @InjectConnection() private connection: Connection,
-    @Inject(FeedbackService) private feedbackService: FeedbackService) { }
+    @Inject(forwardRef(() => FeedbackService)) private feedbackService: FeedbackService) { }
 
   async createOrder(body) {
     const { userId, orderPreference } = body;
@@ -297,14 +297,48 @@ export class OrderService {
           product.details = item
 
         }
-        const rating = await this.feedbackService.getRating(product.itemId)
+        const rating = await this.feedbackService.getOrderItemRating({ orderId: order._id, itemId: product.itemId })
+        console.log(rating)
+        if (rating) {
+          product.details.rating = rating;
+        } else {
+          product.details.rating = 0
+        }
 
-        product.details.rating = rating;
+
       }
     }
     console.log(orders)
     return orders;
   }
+
+  async getOrderByCustomerId(user, orderId) {
+
+
+    const order = await this.orderModel.findById(orderId);
+    for (const product of order.products) {
+
+      const item = await this.connection.db.collection('items').findOne({ itemid: product.itemId });
+
+
+      if (item) {
+        product.details = item
+
+      }
+      const rating = await this.feedbackService.getOrderItemRating({ orderId: order._id, itemId: product.itemId })
+      console.log(rating)
+      if (rating) {
+        product.details.rating = rating;
+      } else {
+        product.details.rating = 0
+      }
+
+
+    }
+    return order;
+
+  }
+
 
   async getOrdersByCustomerIdAdmin(user, state) {
     const response = await this.orderModel.find({ user, state }).exec();
