@@ -37,7 +37,24 @@ export class AuthService {
     })
 
   }
+  async check(body) {
+    const existing = await this.userModel.findOne({ phoneNumber: body.phoneNumber });
+    if (!existing) {
+      return {
+        message: "0"
+      }
 
+    }
+    if (existing.isActive) {
+      return {
+        message: 'account already exists. Please login to continue.'
+      }
+    }
+    return {
+      message: 'You already had an account with us. Want to activate it now?'
+    }
+
+  }
   smsGatewayOtp(body) {
     // Replace the placeholders with actual values
     const apiKey = this.configService.get<string>('SMS_KEY');
@@ -106,9 +123,9 @@ export class AuthService {
 
         }
         else {
-          existingUser.isActive = true;
-          await existingUser.save();
-          throw new Error("your account has been reactivated. Please login.");
+          // existingUser.isActive = true;
+          // await existingUser.save();
+          // throw new Error("your account has been reactivated. Please login.");
         }
 
       }
@@ -203,8 +220,14 @@ export class AuthService {
         throw new Error('User not found');
       }
       if (user.isActive === false) {
-        throw new Error('reactivate account');
+        // return {
+        //   message: 'Please signup again to reactivate your account.',
+        // };
+
+        user.isActive = true;
+        await user.save()
       }
+
 
       // If user not found, throw an error
 

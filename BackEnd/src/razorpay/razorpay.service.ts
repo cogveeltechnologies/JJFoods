@@ -1,4 +1,4 @@
-import { Inject, Injectable, ParseFloatPipe } from '@nestjs/common';
+import { Inject, Injectable, ParseFloatPipe, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Salt } from './schemas/salt.schema';
 import { Model } from 'mongoose';
@@ -14,7 +14,7 @@ export class RazorpayService {
   constructor(@InjectModel(Salt.name) private saltModel: Model<Salt>,
     @InjectModel(Order.name) private orderModel: Model<Order>,
     private configService: ConfigService,
-    @Inject(PetPoojaService) private readonly petPoojaService: PetPoojaService,
+    @Inject(forwardRef(() => PetPoojaService)) private readonly petPoojaService: PetPoojaService,
     @Inject(CartService) private readonly cartService: CartService) { }
 
   async payment(body) {
