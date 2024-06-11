@@ -313,9 +313,11 @@ export class OrderService {
   }
 
   async getOrderByCustomerId(user, orderId) {
+    // console.log(orderId)
 
 
-    const order = await this.orderModel.findById(orderId);
+    const order = await this.orderModel.findOne({ _id: orderId });
+    // console.log(order)
     for (const product of order.products) {
 
       const item = await this.connection.db.collection('items').findOne({ itemid: product.itemId });

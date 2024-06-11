@@ -32,7 +32,8 @@ export class OrderController {
 
   @Post('/user/order')
   async getOrderByCustomerId(@Body() body) {
-    console.log(body)
+
+    console.log("---------------------------", body)
     return this.orderService.getOrderByCustomerId(body.userId, body.orderId)
   }
 

@@ -25,13 +25,15 @@ export class FeedbackService {
   }
 
   async createOrderItemRating(body) {
+    const { orderId } = body
     const newRating = new this.ratingOrderModel({ ...body, user: body.userId, order: body.orderId });
     await newRating.save();
 
     delete body.orderId
+    console.log("----------------", body)
 
     await this.createOrUpdateRating(body)
-    return await this.orderService.getOrderByCustomerId(body.userId, body.orderId)
+    return await this.orderService.getOrderByCustomerId(body.userId, orderId)
 
   }
 
