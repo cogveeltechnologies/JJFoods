@@ -29,7 +29,7 @@ export class AuthController {
   }
 
   @Post('/signupOtp')
-  signupOtp(@Body() signupOtpDto: SignupOtpDto) {
+  signupOtp(@Body() signupOtpDto) {
     return this.authService.signupOtp(signupOtpDto);
   }
 

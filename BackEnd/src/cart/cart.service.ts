@@ -125,19 +125,31 @@ export class CartService {
     return { newData, itemsTotal, cgst, sgst, platformFee, grandTotal, discount, deliveryFee };
   }
 
+  // async getCartNumber(body) {
+  //   const { userId } = body;
+  //   // console.log(userId);
+  //   const resPonse = await this.cartModel.findOne({ user: userId });
+  //   console.log(resPonse)
+  //   if (resPonse) {
+  //     return resPonse.cartItems.length
+  //   }
+  //   else {
+  //     return 0;
+
+  //   }
+  // }
   async getCartNumber(body) {
     const { userId } = body;
-    // console.log(userId);
-    const resPonse = await this.cartModel.findOne({ user: userId });
-    console.log(resPonse)
-    if (resPonse) {
-      return resPonse.cartItems.length
-    }
-    else {
-      return 0;
+    const response = await this.cartModel.findOne({ user: userId });
 
+    if (response) {
+      const totalQuantity = response.cartItems.reduce((total, item) => total + item.quantity, 0);
+      return totalQuantity;
+    } else {
+      return 0;
     }
   }
+
   async removeCartItem(body) {
     const { userId } = body;
     const { itemId } = body.product;

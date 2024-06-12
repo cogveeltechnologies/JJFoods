@@ -26,7 +26,7 @@ export class CartController {
     // console.log("response", cart)
     return cart;
   }
-  @Get('cartNumber')
+  @Post('cartNumber')
   async getCartNumber(@Body() body: any) {
 
     const cartNumber = await this.cartService.getCartNumber(body);
