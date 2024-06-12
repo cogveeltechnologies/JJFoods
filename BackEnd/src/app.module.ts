@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -16,11 +16,26 @@ import { RazorpayModule } from './razorpay/razorpay.module';
 
 @Module({
   imports: [
+    // Load environment variables from .env file and make them globally available
     ConfigModule.forRoot({
       envFilePath: '.env',
       isGlobal: true,
     }),
-    MongooseModule.forRoot(process.env.MONGO_URL),
+    // Configure Mongoose with connection URI from environment variables
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        const mongoUrl = configService.get<string>('MONGO_URL');
+        if (!mongoUrl) {
+          throw new Error('MONGO_URL is not defined in the environment variables');
+        }
+        return {
+          uri: mongoUrl,
+        };
+      },
+      inject: [ConfigService],
+    }),
+    // Import application modules
     AuthModule,
     PetPoojaModule,
     CartModule,
@@ -35,4 +50,3 @@ import { RazorpayModule } from './razorpay/razorpay.module';
   providers: [AppService],
 })
 export class AppModule { }
-
