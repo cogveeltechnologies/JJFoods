@@ -6,18 +6,18 @@ import { HttpModule } from '@nestjs/axios';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { UserSchema } from './schemas/user.schema';
+import { User, UserSchema } from './schemas/user.schema';
+import { Address, AddressSchema } from './schemas/address.schema';
 import { SignupOtp, SignupOtpSchema } from './schemas/signupOtp.schema';
-import { AddressSchema } from './schemas/address.schema';
 
 @Module({
   imports: [
     ConfigModule,
     HttpModule,
     MongooseModule.forFeature([
-      { name: 'User', schema: UserSchema },
-      { name: 'Address', schema: AddressSchema },
-      { name: 'SignupOtp', schema: SignupOtpSchema },
+      { name: User.name, schema: UserSchema },
+      { name: Address.name, schema: AddressSchema },
+      { name: SignupOtp.name, schema: SignupOtpSchema },
     ]),
     MailerModule.forRootAsync({
       imports: [ConfigModule],

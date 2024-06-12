@@ -29,6 +29,13 @@ export class OrderService {
     @InjectConnection() private connection: Connection,
     @Inject(forwardRef(() => FeedbackService)) private feedbackService: FeedbackService) { }
 
+  //admin
+  async getTotalRevenue(): Promise<number> {
+    const completedOrders = await this.orderModel.find({ state: 'completed' }).exec();
+    const totalRevenue = completedOrders.reduce((sum, order) => sum + order.grandTotal, 0);
+    return totalRevenue;
+  }
+
   async createOrder(body) {
     const { userId, orderPreference } = body;
     if (!userId) {

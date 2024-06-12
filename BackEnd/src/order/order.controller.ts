@@ -5,6 +5,12 @@ import { OrderService } from './order.service';
 export class OrderController {
   constructor(private readonly orderService: OrderService) { }
 
+  @Get('revenue')
+  async getRevenue(): Promise<{ revenue: number }> {
+    const revenue = await this.orderService.getTotalRevenue();
+    return { revenue };
+  }
+
   @Post('/createOrder')
   async createOrder(@Body() body) {
     console.log("order:---------------------------", body)
