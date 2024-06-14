@@ -1,4 +1,4 @@
-import { Inject, Injectable, ParseFloatPipe } from '@nestjs/common';
+import { Inject, Injectable, ParseFloatPipe, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Salt } from './schemas/salt.schema';
 import { Model } from 'mongoose';
@@ -14,7 +14,7 @@ export class RazorpayService {
   constructor(@InjectModel(Salt.name) private saltModel: Model<Salt>,
     @InjectModel(Order.name) private orderModel: Model<Order>,
     private configService: ConfigService,
-    @Inject(PetPoojaService) private readonly petPoojaService: PetPoojaService,
+    @Inject(forwardRef(() => PetPoojaService)) private readonly petPoojaService: PetPoojaService,
     @Inject(CartService) private readonly cartService: CartService) { }
 
   async payment(body) {
@@ -63,6 +63,7 @@ export class RazorpayService {
       key_id: this.configService.get<string>('RAZORPAY_ID'),
       key_secret: this.configService.get<string>('RAZORPAY_SECRET'),
     })
+    // return await instance.payments.fetch(body.rPaymentId)
 
     const { orderId, rPaymentId, rSignature, rOrderId } = body
     const saltSaved = await this.saltModel.findOne({ orderId: body.orderId })
@@ -95,7 +96,7 @@ export class RazorpayService {
     const rPassword = razorpayResponse.amount / 100 + body.orderId;
     const isMatchR = await bcrypt.compare(rPassword, saltSaved.salt);
 
-    if (isMatchR) {
+    if (isMatchR && razorpayResponse.captured) {
       //change payment status
       order.payment.status = true;
 
@@ -128,6 +129,11 @@ export class RazorpayService {
           paymentId: rPaymentId,
           status: true
         },
+        preOrder: {
+          type: order?.preOrder?.type,
+          orderDate: order?.preOrder?.orderDate,
+          orderTime: order?.preOrder?.orderTime
+        },
         createdAt: new Date(),
         updatedAt: new Date()
 
@@ -153,6 +159,7 @@ export class RazorpayService {
       }
 
       // Assign values to the properties of petPooja
+
       order.petPooja.restId = petPoojaOrder?.restID;
       order.petPooja.orderId = petPoojaOrder?.orderID;
       order.petPooja.clientOrderId = petPoojaOrder?.clientOrderID;
@@ -178,6 +185,9 @@ export class RazorpayService {
     //save razorpay details in order 
     order.payment.paymentId = rPaymentId
     order.payment.signature = rSignature
+    order.payment.reason = body?.reason
+
+    order.state = "cancelled"
     await order.save()
 
 

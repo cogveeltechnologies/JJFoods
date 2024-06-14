@@ -5,6 +5,18 @@ import { OrderService } from './order.service';
 export class OrderController {
   constructor(private readonly orderService: OrderService) { }
 
+  @Get('admin/details')
+  async getDetails() {
+    const details = await this.orderService.getDetails();
+    return details
+
+  }
+  @Get('admin/getOrders/:period')
+  async getOrdersByPeriod(@Param('period') period: 'today' | 'week' | 'month') {
+    console.log(period)
+    return this.orderService.findOrdersByTimePeriod(period);
+  }
+
   @Post('/createOrder')
   async createOrder(@Body() body) {
     console.log("order:---------------------------", body)
@@ -28,6 +40,13 @@ export class OrderController {
   async getOrdersByCustomerId(@Body() body) {
     //completed or processing
     return this.orderService.getOrdersByCustomerId(body.userId, body.state);
+  }
+
+  @Post('/user/order')
+  async getOrderByCustomerId(@Body() body) {
+
+    console.log("---------------------------", body)
+    return this.orderService.getOrderByCustomerId(body.userId, body.orderId)
   }
 
   @Post('admin/user')

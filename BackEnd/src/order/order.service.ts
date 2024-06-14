@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Order } from './schemas/order.schema';
 import { Connection, Model } from 'mongoose';
@@ -11,6 +11,7 @@ import { Address } from 'src/auth/schemas/address.schema';
 import { PetPoojaService } from 'src/pet-pooja/pet-pooja.service';
 import { RazorpayService } from 'src/razorpay/razorpay.service';
 import { ConfigService } from '@nestjs/config';
+import { FeedbackService } from 'src/feedback/feedback.service';
 
 @Injectable()
 export class OrderService {
@@ -21,18 +22,103 @@ export class OrderService {
     @InjectModel(Coupon.name) private couponModel: Model<Coupon>,
     @Inject(CouponService)
     private readonly couponService: CouponService,
-    @Inject(PetPoojaService)
+    @Inject(forwardRef(() => PetPoojaService))
     private readonly petPoojaService: PetPoojaService,
     @Inject(RazorpayService) private readonly razorpayService: RazorpayService,
     private configService: ConfigService,
-    @InjectConnection() private connection: Connection,) { }
+    @InjectConnection() private connection: Connection,
+    @Inject(forwardRef(() => FeedbackService)) private feedbackService: FeedbackService) { }
+
+  //admin
+  async findOrdersByTimePeriod(period: 'today' | 'week' | 'month') {
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (period) {
+      case 'today':
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // set to the beginning of the day
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999); // set to the end of the day
+        break;
+      case 'week':
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // set to the beginning of the day
+        startDate.setDate(startDate.getDate() - 7); // get the date 7 days ago
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999); // set to the end of the current day
+        break;
+      case 'month':
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // set to the beginning of the day
+        startDate.setDate(startDate.getDate() - 31); // get the date 31 days ago
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999); // set to the end of the current day
+        break;
+      default:
+        throw new Error('Invalid time period');
+    }
+
+    // Count orders by their states
+    const onDeliveryCount = await this.orderModel.countDocuments({
+      createdAt: { $gte: startDate, $lte: endDate },
+      state: { $in: ['pending', 'processing', 'ready', 'on the way'] }
+    }).exec();
+
+
+
+    const completedCount = await this.orderModel.countDocuments({
+      createdAt: { $gte: startDate, $lte: endDate },
+      state: 'completed'
+    }).exec();
+
+    const cancelledCount = await this.orderModel.countDocuments({
+      createdAt: { $gte: startDate, $lte: endDate },
+      state: 'cancelled'
+    }).exec();
+
+    startDate = new Date();
+    startDate.setHours(0, 0, 0, 0); // set to the beginning of the day
+    endDate = new Date();
+    endDate.setHours(23, 59, 59, 999)
+
+    const today = await this.orderModel.countDocuments({
+      createdAt: { $gte: startDate, $lte: endDate },
+      state: { $in: ['pending', 'processing', 'ready', 'on the way'] }
+    }).exec();
+
+    return {
+      today,
+      onDelivery: onDeliveryCount,
+      delivered: completedCount,
+      cancelled: cancelledCount
+    };
+  }
+  async getDetails() {
+
+    const totalOrdersArr = await this.orderModel.find();
+
+    const totalOrders = totalOrdersArr.length;
+
+
+    const completedOrdersArr = await this.orderModel.find({ state: 'completed' }).exec();
+    const completedOrders = completedOrdersArr.length
+    const revenue = completedOrdersArr.reduce((sum, order) => sum + order.grandTotal, 0);
+    const customersArr = await this.userModel.find({ isActive: true })
+    const customers = customersArr.length;
+
+
+    return { totalOrders, revenue, completedOrders, customers }
+  }
 
   async createOrder(body) {
     const { userId, orderPreference } = body;
-    // if (!userId) {
-    //   console.log("user id not found")
-    // }
+    if (!userId) {
+      console.log("user id not found")
+    }
     const { couponId } = body.discount;
+
+    const { type, orderDate, orderTime } = body.preOrder;
 
     // const userCartDocument = await this.cartModel.findOne({ user: userId })
     const deliveryFee = 0;
@@ -95,6 +181,11 @@ export class OrderService {
         paymentId: body.payment?.paymentId,
         status: false
       },
+      preOrder: {
+        type,
+        orderDate,
+        orderTime
+      },
       createdAt: new Date(),
       updatedAt: new Date()
 
@@ -122,6 +213,11 @@ export class OrderService {
         paymentId: body.payment?.paymentId,
         status: false
       },
+      preOrder: {
+        type,
+        orderDate,
+        orderTime
+      },
       createdAt: new Date(),
       updatedAt: new Date()
 
@@ -133,16 +229,19 @@ export class OrderService {
       await order.save();
     }
     else {
-      const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody)
+
+      // make order only after admin accepts
+
+      // const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody)
 
       // console.log(petPoojaOrder.restID)
 
 
-      const newOrderBody = { ...orderBody, petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID } }
+      // const newOrderBody = { ...orderBody, petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID } }
 
 
 
-      order = new this.orderModel(newOrderBody);
+      order = new this.orderModel(orderBody);
       await order.save();
     }
 
@@ -194,9 +293,59 @@ export class OrderService {
   }
 
   async updateOrderStateCod(orderId: string) {
-    return this.orderModel.findByIdAndUpdate(orderId, { state: "processing", updatedAt: Date.now() }, { new: true }).exec();
+    const order = await this.orderModel.findByIdAndUpdate(orderId, { state: "processing", updatedAt: Date.now() }, { new: true }).exec();
 
-    //petpooja
+    const petPoojaOrderBody = {
+      user: await this.userModel.findOne({ _id: order.user }),
+      products: order.products,
+      cgst: order.cgst,
+      sgst: order.sgst,
+      discount: {
+        couponId: order.discount.couponId,
+        discount: order.discount.discount
+      },
+      itemsTotal: order.itemsTotal,
+      grandTotal: order.grandTotal,
+      deliveryFee: order.deliveryFee,
+      platformFee: 15,
+      orderPreference: order.orderPreference,
+      address: order.address ? await this.addressModel.findOne({ _id: order.address }) : undefined,
+
+      payment: {
+        paymentMethod: order.payment.paymentMethod,
+        paymentId: order.payment.paymentId,
+        status: order.payment.status
+      },
+      preOrder: {
+        type: order.preOrder.type,
+        orderDate: order.preOrder.orderDate,
+        orderTime: order.preOrder.orderTime
+      },
+      createdAt: order.createdAt,
+      updatedAt: new Date()
+    };
+
+    const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody);
+
+    await this.orderModel.findByIdAndUpdate(orderId, {
+      petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID },
+      updatedAt: Date.now()
+    }, { new: true }).exec();
+    // const order = await this.orderModel.findByIdAndUpdate(orderId, { state: "processing", updatedAt: Date.now() }, { new: true }).exec();
+
+    // //petpooja
+    // const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody)
+
+    //   // console.log(petPoojaOrder.restID)
+
+
+    //   const newOrderBody = { ...orderBody, petPooja: { restId: petPoojaOrder.restID, orderId: petPoojaOrder.orderID, clientOrderId: petPoojaOrder.clientOrderID } }
+
+
+
+    //   order = new this.orderModel(newOrderBody);
+    //   await order.save();
+
 
   }
 
@@ -230,15 +379,54 @@ export class OrderService {
           product.details = item
 
         }
+        const rating = await this.feedbackService.getOrderItemRating({ orderId: order._id, itemId: product.itemId })
+        console.log(rating)
+        if (rating) {
+          product.details.rating = rating;
+        } else {
+          product.details.rating = 0
+        }
+
+
       }
     }
     console.log(orders)
     return orders;
   }
 
+  async getOrderByCustomerId(user, orderId) {
+    // console.log(orderId)
+
+
+    const order = await this.orderModel.findOne({ _id: orderId });
+    // console.log(order)
+    for (const product of order.products) {
+
+      const item = await this.connection.db.collection('items').findOne({ itemid: product.itemId });
+
+
+      if (item) {
+        product.details = item
+
+      }
+      const rating = await this.feedbackService.getOrderItemRating({ orderId: order._id, itemId: product.itemId })
+      console.log(rating)
+      if (rating) {
+        product.details.rating = rating;
+      } else {
+        product.details.rating = 0
+      }
+
+
+    }
+    return order;
+
+  }
+
+
   async getOrdersByCustomerIdAdmin(user, state) {
     const response = await this.orderModel.find({ user, state }).exec();
-    // return response;
+    return response;
 
   }
 

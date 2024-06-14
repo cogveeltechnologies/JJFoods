@@ -10,7 +10,7 @@ import { PetPoojaModule } from 'src/pet-pooja/pet-pooja.module';
 import { CartModule } from 'src/cart/cart.module';
 
 @Module({
-  imports: [ConfigModule, MongooseModule.forFeature([{ name: 'Salt', schema: SaltSchema }, { name: 'Order', schema: OrderSchema }]), forwardRef(() => OrderModule), PetPoojaModule, CartModule],
+  imports: [ConfigModule, MongooseModule.forFeature([{ name: 'Salt', schema: SaltSchema }, { name: 'Order', schema: OrderSchema }]), forwardRef(() => OrderModule), forwardRef(() => PetPoojaModule), CartModule],
   providers: [RazorpayService],
   controllers: [RazorpayController],
   exports: [RazorpayService]

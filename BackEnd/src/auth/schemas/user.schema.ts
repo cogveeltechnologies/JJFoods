@@ -37,6 +37,9 @@ export class User {
   reason: string
 
 
+  @Prop({ default: false })
+  isAdmin: boolean
+
 
 
 }

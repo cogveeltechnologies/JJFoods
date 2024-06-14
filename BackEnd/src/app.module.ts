@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { PetPoojaModule } from './pet-pooja/pet-pooja.module';
 import { CartModule } from './cart/cart.module';
@@ -14,20 +15,37 @@ import { StripeModule } from './stripe/stripe.module';
 import { RazorpayModule } from './razorpay/razorpay.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({
-    envFilePath: '.env',
-    isGlobal: true
-  }),
-  MongooseModule.forRoot(process.env.MONGO_URL),
-  AuthModule,
-  PetPoojaModule,
-  CartModule,
-  FeedbackModule,
-  WishlistModule,
-  CouponModule,
-  OrderModule,
-  StripeModule,
-  RazorpayModule],
+  imports: [
+    // Load environment variables from .env file and make them globally available
+    ConfigModule.forRoot({
+      envFilePath: '.env',
+      isGlobal: true,
+    }),
+    // Configure Mongoose with connection URI from environment variables
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        const mongoUrl = configService.get<string>('MONGO_URL');
+        if (!mongoUrl) {
+          throw new Error('MONGO_URL is not defined in the environment variables');
+        }
+        return {
+          uri: mongoUrl,
+        };
+      },
+      inject: [ConfigService],
+    }),
+    // Import application modules
+    AuthModule,
+    PetPoojaModule,
+    CartModule,
+    FeedbackModule,
+    WishlistModule,
+    CouponModule,
+    OrderModule,
+    StripeModule,
+    RazorpayModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

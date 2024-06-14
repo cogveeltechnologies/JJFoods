@@ -3,18 +3,18 @@ import mongoose, { HydratedDocument } from 'mongoose';
 import { User } from 'src/auth/schemas/user.schema';
 import { Order } from 'src/order/schemas/order.schema';
 
-export type FeedbackDocument = HydratedDocument<Feedback>;
+export type RatingOrderDocument = HydratedDocument<RatingOrder>;
 
 @Schema()
-export class Feedback {
+export class RatingOrder {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   user: User
 
   @Prop()
   feedback: string
 
-  // @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Order' })
-  // order: Order
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Order' })
+  order: Order
 
 
 
@@ -30,4 +30,4 @@ export class Feedback {
 
 }
 
-export const FeedbackSchema = SchemaFactory.createForClass(Feedback);
+export const RatingOrderSchema = SchemaFactory.createForClass(RatingOrder);

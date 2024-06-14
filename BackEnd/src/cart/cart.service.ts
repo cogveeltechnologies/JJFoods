@@ -32,10 +32,7 @@ export class CartService {
         const updatedProduct = await this.cartModel.findOne({ user: userId });
 
 
-        return {
-          message: "Added Cart",
-          total: updatedProduct?.cartItems?.length,
-        };
+        return await this.getUserCart(userId, undefined)
       } else {
         const addNewProduct = await this.cartModel.findOneAndUpdate(
           { user: userId },
@@ -43,10 +40,7 @@ export class CartService {
           { new: true }
         );
 
-        return ({
-          message: "Added Cart",
-          total: addNewProduct?.cartItems?.length,
-        });
+        return await this.getUserCart(userId, undefined)
       }
     } else {
       const product = await this.cartModel.create({
@@ -54,10 +48,7 @@ export class CartService {
         cartItems: [{ product: { ...body.product }, quantity }],
       });
       // return await this.getUserCart(userId, undefined)
-      return ({
-        message: "Added Cart",
-        total: product?.cartItems?.length,
-      });
+      return await this.getUserCart(userId, undefined)
     }
   };
 
@@ -119,25 +110,39 @@ export class CartService {
 
     const grandTotal = itemsTotal + cgst + sgst + platformFee - discount + deliveryFee;
 
+    const cartLength = await this.getCartNumber(userId)
+
 
 
     // console.log(newData);
-    return { newData, itemsTotal, cgst, sgst, platformFee, grandTotal, discount, deliveryFee };
+    return { newData, itemsTotal, cgst, sgst, platformFee, grandTotal, discount, deliveryFee, cartLength };
   }
 
-  async getCartNumber(body) {
-    const { userId } = body;
-    // console.log(userId);
-    const resPonse = await this.cartModel.findOne({ user: userId });
-    console.log(resPonse)
-    if (resPonse) {
-      return resPonse.cartItems.length
-    }
-    else {
+  // async getCartNumber(body) {
+  //   const { userId } = body;
+  //   // console.log(userId);
+  //   const resPonse = await this.cartModel.findOne({ user: userId });
+  //   console.log(resPonse)
+  //   if (resPonse) {
+  //     return resPonse.cartItems.length
+  //   }
+  //   else {
+  //     return 0;
+
+  //   }
+  // }
+  async getCartNumber(userId) {
+
+    const response = await this.cartModel.findOne({ user: userId });
+
+    if (response) {
+      const totalQuantity = response.cartItems.reduce((total, item) => total + item.quantity, 0);
+      return totalQuantity;
+    } else {
       return 0;
-
     }
   }
+
   async removeCartItem(body) {
     const { userId } = body;
     const { itemId } = body.product;
