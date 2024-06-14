@@ -30,10 +30,85 @@ export class OrderService {
     @Inject(forwardRef(() => FeedbackService)) private feedbackService: FeedbackService) { }
 
   //admin
-  async getTotalRevenue(): Promise<number> {
-    const completedOrders = await this.orderModel.find({ state: 'completed' }).exec();
-    const totalRevenue = completedOrders.reduce((sum, order) => sum + order.grandTotal, 0);
-    return totalRevenue;
+  async findOrdersByTimePeriod(period: 'today' | 'week' | 'month') {
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (period) {
+      case 'today':
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // set to the beginning of the day
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999); // set to the end of the day
+        break;
+      case 'week':
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // set to the beginning of the day
+        startDate.setDate(startDate.getDate() - 7); // get the date 7 days ago
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999); // set to the end of the current day
+        break;
+      case 'month':
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // set to the beginning of the day
+        startDate.setDate(startDate.getDate() - 31); // get the date 31 days ago
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999); // set to the end of the current day
+        break;
+      default:
+        throw new Error('Invalid time period');
+    }
+
+    // Count orders by their states
+    const onDeliveryCount = await this.orderModel.countDocuments({
+      createdAt: { $gte: startDate, $lte: endDate },
+      state: { $in: ['pending', 'processing', 'ready', 'on the way'] }
+    }).exec();
+
+
+
+    const completedCount = await this.orderModel.countDocuments({
+      createdAt: { $gte: startDate, $lte: endDate },
+      state: 'completed'
+    }).exec();
+
+    const cancelledCount = await this.orderModel.countDocuments({
+      createdAt: { $gte: startDate, $lte: endDate },
+      state: 'cancelled'
+    }).exec();
+
+    startDate = new Date();
+    startDate.setHours(0, 0, 0, 0); // set to the beginning of the day
+    endDate = new Date();
+    endDate.setHours(23, 59, 59, 999)
+
+    const today = await this.orderModel.countDocuments({
+      createdAt: { $gte: startDate, $lte: endDate },
+      state: { $in: ['pending', 'processing', 'ready', 'on the way'] }
+    }).exec();
+
+    return {
+      today,
+      onDelivery: onDeliveryCount,
+      delivered: completedCount,
+      cancelled: cancelledCount
+    };
+  }
+  async getDetails() {
+
+    const totalOrdersArr = await this.orderModel.find();
+
+    const totalOrders = totalOrdersArr.length;
+
+
+    const completedOrdersArr = await this.orderModel.find({ state: 'completed' }).exec();
+    const completedOrders = completedOrdersArr.length
+    const revenue = completedOrdersArr.reduce((sum, order) => sum + order.grandTotal, 0);
+    const customersArr = await this.userModel.find({ isActive: true })
+    const customers = customersArr.length;
+
+
+    return { totalOrders, revenue, completedOrders, customers }
   }
 
   async createOrder(body) {
@@ -351,7 +426,7 @@ export class OrderService {
 
   async getOrdersByCustomerIdAdmin(user, state) {
     const response = await this.orderModel.find({ user, state }).exec();
-    // return response;
+    return response;
 
   }
 

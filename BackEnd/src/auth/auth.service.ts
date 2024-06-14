@@ -70,10 +70,10 @@ export class AuthService {
       }
 
       if (existing.isActive) {
-        return { message: 'User                                                                                                                                                                                                                                                                                                                                                                    already exists. Please login to continue.' };
+        return { message: 'User already exists. Please login to continue.' };
       }
 
-      return { message: 'You already had an account with us. Want to activate it now?' };
+      return { message: 'You already had an account with us. Login to activate.' };
     } catch (error) {
       throw new Error(`Failed to check user: ${error.message}`);
     }
@@ -156,7 +156,195 @@ export class AuthService {
     return validationCode;
   }
 
+  async adminSignupOtp(signupOtpDto) {
+    try {
+      const existingUserByEmail = await this.userModel.findOne({
+        emailId: signupOtpDto.emailId,
+      });
+      if (existingUserByEmail && existingUserByEmail.isActive) {
+        return new HttpException(
+          'User with this email already exists.',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const existingUserByPhoneNumber = await this.userModel.findOne({
+        phoneNumber: signupOtpDto.phoneNumber,
+      });
+      if (existingUserByPhoneNumber && existingUserByPhoneNumber.isActive) {
+        return new HttpException(
+          'User with this phone number already exists.',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const existingOtp = await this.signupOtpModel.findOne({
+        emailId: signupOtpDto.emailId,
+      });
+      let otp = this.generateOtp();
+      if (existingOtp) {
+        await this.signupOtpModel.findOneAndUpdate(
+          { emailId: signupOtpDto.emailId },
+          { otp },
+        );
+      } else {
+        const newUser = new this.signupOtpModel({
+          emailId: signupOtpDto.emailId,
+          otp,
+        });
+        await newUser.save();
+      }
+
+      const body = {
+        phoneNumber: signupOtpDto.phoneNumber,
+        otp,
+      };
+      this.smsGatewayOtp(body);
+
+      // Send email
+      this.sendMail(signupOtpDto.emailId, otp);
+
+      return { message: 'OTP sent' };
+    } catch (error) {
+      // Throw a custom HTTP exception with the error message
+      return new HttpException(
+        `Failed to sign up: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+  async adminSignUp(signupDto) {
+    try {
+      // Check if user with the same email and phoneNumber already exists
+      const existingUser = await this.userModel.findOne({
+        emailId: signupDto.emailId,
+        phoneNumber: signupDto.phoneNumber
+      });
+      if (existingUser) {
+        throw new HttpException(
+          'User with this email already exists.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Check if user exists in OTP collection
+      const user = await this.signupOtpModel.findOne({ emailId: signupDto.emailId });
+      if (!user) {
+        throw new HttpException('User not exists', HttpStatus.BAD_REQUEST);
+      }
+
+      // Validate OTP
+      if (user.otp !== signupDto.otp) {
+        throw new HttpException('Invalid OTP', HttpStatus.BAD_REQUEST);
+      }
+
+      // Verify OTP with SMS gateway
+      const resp = await this.smsGatewayVerify({
+        phoneNumber: signupDto.phoneNumber,
+        otp: signupDto.otp,
+      });
+
+      // Check the response status
+      if (resp['Status'] === 'Error') {
+        throw new HttpException('Invalid OTP', HttpStatus.BAD_REQUEST);
+      }
+
+      // Create a new user instance
+      const createdUser = new this.userModel({
+        name: signupDto.name,
+        emailId: signupDto.emailId,
+        phoneNumber: signupDto.phoneNumber,
+        isAdmin: true
+      });
+
+      // Save the user to the database
+      await createdUser.save();
+      return createdUser;
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(
+        `Failed to sign up: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async adminLoginOtp(loginOtpDto) {
+    try {
+      // Find user by phone number
+      const user = await this.userModel.findOne({ phoneNumber: loginOtpDto.phoneNumber });
+      if (!user) {
+        return new HttpException('User not found. Please SignUp to continue.', HttpStatus.NOT_FOUND);
+      }
+      //is admin  
+      if (!user.isAdmin) {
+        return new HttpException('Admin not found. Please SignUp to continue.', HttpStatus.NOT_FOUND);
+      }
+
+
+      // Reactivate the user account if inactive
+      if (!user.isActive) {
+        user.isActive = true;
+        await user.save();
+      }
+
+      // Generate and update OTP for the user
+      const otp = this.generateOtp();
+      await this.signupOtpModel.findOneAndUpdate({ emailId: user.emailId }, { otp });
+
+      // Send OTP via SMS
+      const body = {
+        phoneNumber: loginOtpDto.phoneNumber,
+        otp
+      };
+      this.smsGatewayOtp(body);
+
+      // Send OTP via email
+      this.sendMail(user.emailId, otp);
+
+      return { data: 'OTP sent' };
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(`Login failed: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async adminLogin(loginDto) {
+    try {
+      // Find user by phone number
+      const user = await this.userModel.findOne({ phoneNumber: loginDto.phoneNumber });
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+      //is admin  
+      if (!user.isAdmin) {
+        return new HttpException('Admin not found. Please SignUp to continue.', HttpStatus.NOT_FOUND);
+      }
+
+      // Verify OTP
+      const resp = await this.smsGatewayVerify({
+        phoneNumber: loginDto.phoneNumber,
+        otp: loginDto.otp
+      });
+      if (resp.Status === 'Error') {
+        throw new HttpException('Invalid OTP', HttpStatus.BAD_REQUEST);
+      }
+
+      // Retrieve OTP for user from the database
+      const userOtp = await this.signupOtpModel.findOne({ emailId: user.emailId });
+      if ((!userOtp) || (userOtp.otp !== loginDto.otp)) {
+        throw new HttpException('Invalid OTP', HttpStatus.BAD_REQUEST);
+      }
+
+      return user;
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(`Login failed: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   async signupOtp(signupOtpDto) {
+
     try {
       const existingUserByEmail = await this.userModel.findOne({
         emailId: signupOtpDto.emailId,
@@ -274,7 +462,7 @@ export class AuthService {
       // Find user by phone number
       const user = await this.userModel.findOne({ phoneNumber: loginOtpDto.phoneNumber });
       if (!user) {
-        return new HttpException('User not found. Please SignUp to continue.', HttpStatus.NOT_FOUND);
+        return new HttpException('User not found. Please ignUp to continue.', HttpStatus.NOT_FOUND);
       }
 
       // Reactivate the user account if inactive
@@ -314,6 +502,8 @@ export class AuthService {
       if (!user) {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
       }
+
+
 
       // Verify OTP
       const resp = await this.smsGatewayVerify({
@@ -417,106 +607,167 @@ export class AuthService {
     }
   }
 
-  async updateProfile(updateProfileDto: any, file) {
-    const user = await this.userModel.findOne({ phoneNumber: updateProfileDto.phoneNumber })
-    // console.log(updateDto.phoneNumber)
-    if (!user) {
-      throw new Error("User not found");
+  async updateProfile(updateProfileDto: any, file: Express.Multer.File) {
+    try {
+
+      if (updateProfileDto?.isAdmin !== undefined) {
+        delete updateProfileDto.isAdmin;
+      }
+      // Find user by phone number
+      const user = await this.userModel.findOne({ phoneNumber: updateProfileDto.phoneNumber });
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+
+      // Update user profile information
+      const updatedUser = await this.userModel.findOneAndUpdate(
+        { phoneNumber: updateProfileDto.phoneNumber },
+        { $set: updateProfileDto },
+        { new: true } // Return the updated document
+      );
+
+      // If a file is provided, upload the image and set the imageUrl
+      if (file) {
+        const imageUrl = await this.uploadImage(file);
+        updatedUser.imageUrl = imageUrl;
+      }
+
+      // Save the updated user document
+      await updatedUser.save();
+
+      return updatedUser;
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(`Failed to update profile: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-    const updatedUser = await this.userModel.findOneAndUpdate(
-      { phoneNumber: updateProfileDto.phoneNumber },
-      { $set: updateProfileDto },
-      { new: true } // Return the updated document
-    )
-    if (file) {
-
-      const imageUrl = await this.uploadImage(file);
-
-      updatedUser['imageUrl'] = imageUrl;
-    }
-
-    await updatedUser.save()
-    return updatedUser;
-
-
   }
 
-  async deleteProfile(body) {
-    const user = await this.userModel.findById(body.userId);
+  async deleteProfile(body: any) {
+    try {
+      const user = await this.userModel.findById(body.userId);
 
-    // Check if the user exists
-    if (!user) {
-      throw new NotFoundException('User not found');
+      // Check if the user exists
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Update the user's isActive status and reason
+      user.isActive = false;
+      user.reason = body.reason;
+
+      // Save the updated user
+      await user.save();
+
+      return user;
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(`Failed to delete profile: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    // Update the user's isActive status and reason
-    user.isActive = false;
-    user.reason = body.reason;
-
-    // Save the updated user
-    await user.save();
-
-    return user;
-
   }
   // address
 
   async addAddress(addressDto: any) {
-    // console.log("smsssssskeyyyyyy", this.configService.get<string>('SMS_KEY'))
-    console.log(addressDto)
-    if (addressDto.isDefault) {
+    try {
+      // Log the address DTO for debugging
+      console.log(addressDto);
 
-      await this.addressModel.updateMany({ isDefault: true }, { $set: { isDefault: false } });
+      // If the address is marked as default, update all other addresses to non-default
+      if (addressDto.isDefault) {
+        await this.addressModel.updateMany({ isDefault: true }, { $set: { isDefault: false } });
+      }
+
+      // Create and save the new address
+      const createdAddress = new this.addressModel(addressDto);
+      await createdAddress.save();
+
+      return createdAddress;
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(`Failed to add address: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-    const createdAddress = new this.addressModel(addressDto);
-    await createdAddress.save();
-    return createdAddress;
   }
 
   async getAddresses(id: any) {
-
-    const addresses = await this.addressModel.find({ user: id });
-    return addresses;
+    try {
+      const addresses = await this.addressModel.find({ user: id });
+      return addresses;
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(`Failed to retrieve addresses: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
   async getAddress(id: any) {
-
-    const address = await this.addressModel.findOne({ _id: id })
-    return address;
+    try {
+      const address = await this.addressModel.findOne({ _id: id });
+      if (!address) {
+        throw new HttpException('Address not found', HttpStatus.NOT_FOUND);
+      }
+      return address;
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(`Failed to retrieve address: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
   async updateAddress(updateAddressDto, id) {
-    if (updateAddressDto.isDefault) {
-      await this.addressModel.updateMany({ isDefault: true }, { $set: { isDefault: false } });
+    try {
+      if (updateAddressDto.isDefault) {
+        await this.addressModel.updateMany({ isDefault: true }, { $set: { isDefault: false } });
+      }
 
+      const updatedAddress = await this.addressModel.findOneAndUpdate(
+        { _id: id },
+        updateAddressDto,
+        { new: true }
+      );
+
+      if (!updatedAddress) {
+        throw new HttpException('Address not found', HttpStatus.NOT_FOUND);
+      }
+
+      return await this.getAddresses(updatedAddress.user);
+    } catch (error) {
+      // Handle errors
+      throw new HttpException(`Failed to update address: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-    const updatedAddress = await this.addressModel.findOneAndUpdate({ _id: id }, updateAddressDto, { new: true });
-    return await this.getAddresses(updatedAddress.user)
   }
 
-  async deleteAddress(id, userId) {
-    await this.addressModel.deleteOne({ _id: id })
 
-    const arr = await this.addressModel.find()
-    const length = arr.length;
+  async deleteAddress(id: string, userId: string) {
+    try {
+      const deleteResult = await this.addressModel.deleteOne({ _id: id });
 
+      if (deleteResult.deletedCount === 0) {
+        throw new NotFoundException('Address not found');
+      }
 
-    if (length == 1) {
-      await this.addressModel.updateMany({}, { $set: { isDefault: true } });
+      const userAddresses = await this.addressModel.find({ user: userId });
 
+      if (userAddresses.length === 1) {
+        await this.addressModel.updateOne({ _id: userAddresses[0]._id }, { $set: { isDefault: true } });
+      }
+
+      return await this.getAddresses(userId);
+    } catch (error) {
+      throw new HttpException(`Failed to delete address: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    return await this.getAddresses(userId)
   }
 
-  async updateState(id, userId) {
-    console.log(id)
-    await this.addressModel.updateMany({ isDefault: true }, { $set: { isDefault: false } });
+  async updateState(id: string, userId: string) {
+    try {
+      // Set all addresses for the user to non-default
+      await this.addressModel.updateMany({ user: userId, isDefault: true }, { $set: { isDefault: false } });
 
-    await this.addressModel.updateOne({ _id: id }, { $set: { isDefault: true } })
+      // Set the specified address to default
+      const updatedAddress = await this.addressModel.updateOne({ _id: id, user: userId }, { $set: { isDefault: true } });
 
-    return await this.getAddresses(userId)
+      if (!updatedAddress) {
+        throw new HttpException('Address not found or already set as default', HttpStatus.NOT_FOUND);
+      }
 
-
-
+      return await this.getAddresses(userId);
+    } catch (error) {
+      throw new HttpException(`Failed to update address state: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async automaticAddress(ip) {

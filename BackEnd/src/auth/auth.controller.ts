@@ -23,6 +23,25 @@ import { UpdateProfileDto } from './dtos/updateProfile.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
+  @Post('/admin/signupOtp')
+  adminSignupOtp(@Body() body: any) {
+    return this.authService.adminSignupOtp(body)
+  }
+
+  @Post('/admin/signup')
+  adminSignUp(@Body() body: any) {
+    return this.authService.adminSignUp(body)
+  }
+
+  @Post('/admin/loginOtp')
+  adminLoginOtp(@Body() body: any) {
+    return this.authService.adminLoginOtp(body)
+  }
+
+  @Post('/admin/login')
+  adminLogin(@Body() body: any) {
+    return this.authService.adminLogin(body)
+  }
   @Post('/check')
   check(@Body() body: any) {
     return this.authService.check(body);
