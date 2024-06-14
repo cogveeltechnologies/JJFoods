@@ -26,10 +26,10 @@ export class CartController {
     // console.log("response", cart)
     return cart;
   }
-  @Post('cartNumber')
-  async getCartNumber(@Body() body: any) {
+  @Get('cartNumber/:userId')
+  async getCartNumber(@Param('userId') userId: any) {
 
-    const cartNumber = await this.cartService.getCartNumber(body);
+    const cartNumber = await this.cartService.getCartNumber(userId);
     return cartNumber;
   }
 

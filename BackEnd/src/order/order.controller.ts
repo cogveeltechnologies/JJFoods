@@ -5,10 +5,16 @@ import { OrderService } from './order.service';
 export class OrderController {
   constructor(private readonly orderService: OrderService) { }
 
-  @Get('revenue')
-  async getRevenue(): Promise<{ revenue: number }> {
-    const revenue = await this.orderService.getTotalRevenue();
-    return { revenue };
+  @Get('admin/details')
+  async getDetails() {
+    const details = await this.orderService.getDetails();
+    return details
+
+  }
+  @Get('admin/getOrders/:period')
+  async getOrdersByPeriod(@Param('period') period: 'today' | 'week' | 'month') {
+    console.log(period)
+    return this.orderService.findOrdersByTimePeriod(period);
   }
 
   @Post('/createOrder')

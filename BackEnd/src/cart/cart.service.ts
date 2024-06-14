@@ -32,10 +32,7 @@ export class CartService {
         const updatedProduct = await this.cartModel.findOne({ user: userId });
 
 
-        return {
-          message: "Added Cart",
-          total: updatedProduct?.cartItems?.length,
-        };
+        return await this.getUserCart(userId, undefined)
       } else {
         const addNewProduct = await this.cartModel.findOneAndUpdate(
           { user: userId },
@@ -43,10 +40,7 @@ export class CartService {
           { new: true }
         );
 
-        return ({
-          message: "Added Cart",
-          total: addNewProduct?.cartItems?.length,
-        });
+        return await this.getUserCart(userId, undefined)
       }
     } else {
       const product = await this.cartModel.create({
@@ -54,10 +48,7 @@ export class CartService {
         cartItems: [{ product: { ...body.product }, quantity }],
       });
       // return await this.getUserCart(userId, undefined)
-      return ({
-        message: "Added Cart",
-        total: product?.cartItems?.length,
-      });
+      return await this.getUserCart(userId, undefined)
     }
   };
 
@@ -119,10 +110,12 @@ export class CartService {
 
     const grandTotal = itemsTotal + cgst + sgst + platformFee - discount + deliveryFee;
 
+    const cartLength = await this.getCartNumber(userId)
+
 
 
     // console.log(newData);
-    return { newData, itemsTotal, cgst, sgst, platformFee, grandTotal, discount, deliveryFee };
+    return { newData, itemsTotal, cgst, sgst, platformFee, grandTotal, discount, deliveryFee, cartLength };
   }
 
   // async getCartNumber(body) {
@@ -138,8 +131,8 @@ export class CartService {
 
   //   }
   // }
-  async getCartNumber(body) {
-    const { userId } = body;
+  async getCartNumber(userId) {
+
     const response = await this.cartModel.findOne({ user: userId });
 
     if (response) {

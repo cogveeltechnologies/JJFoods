@@ -13,9 +13,9 @@ export class CouponController {
   @Post('/apply')
   async applyPromotionalCode(@Body() body) {
     try {
-      console.log(body)
+      console.log("apply coupon", body)
       const updatedPromotionalCode = await this.couponService.decreaseUsage(body);
-      console.log(updatedPromotionalCode)
+      console.log("coupon response", updatedPromotionalCode)
       return updatedPromotionalCode;
     } catch (error) {
       return { error: error.message };
