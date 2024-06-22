@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -26,6 +27,11 @@ export class AuthController {
   @Post('/admin/signupOtp')
   adminSignupOtp(@Body() body: any) {
     return this.authService.adminSignupOtp(body)
+  }
+
+  @Post('/superAdmin')
+  superAdminLogin(@Body() body) {
+    return this.authService.superAdminLogin(body);
   }
 
   @Post('/admin/signup')
@@ -53,7 +59,8 @@ export class AuthController {
   }
 
   @Post('/signup')
-  signUp(@Body() signupDto: SignupDto) {
+  signUp(@Body() signupDto) {
+    console.log(signupDto)
     return this.authService.signUp(signupDto);
   }
 
@@ -115,6 +122,12 @@ export class AuthController {
   @Delete('/deleteAddress/:id')
   deleteAddress(@Param('id') id: string, @Body() body: any) {
     return this.authService.deleteAddress(id, body.userId);
+  }
+
+  @Get('/searchAddress/:userId')
+  searchAddress(@Param('userId') userId, @Query('q') q
+  ) {
+    return this.authService.searchAddress(userId, q);
   }
 
   @Put('/updateState/:id')

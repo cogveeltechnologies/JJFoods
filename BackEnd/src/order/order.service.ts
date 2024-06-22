@@ -115,6 +115,7 @@ export class OrderService {
     const { userId, orderPreference } = body;
     if (!userId) {
       console.log("user id not found")
+      return { message: "error" }
     }
     const { couponId } = body.discount;
 
@@ -356,6 +357,11 @@ export class OrderService {
   async getOrdersByCustomerId(userId, state) {
     // const response = await this.orderModel.find({ user: userId, state: state }).exec();
     // return response;
+    await this.orderModel.updateMany(
+      { "payment.paymentMethod": "online", "payment.status": false, user: userId },
+      { $set: { state: "cancelled" } }
+    );
+
     let queryStates;
     if (state === 'running') {
       queryStates = ['processing', 'ready', 'on the way', 'pending'];

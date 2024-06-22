@@ -13,6 +13,10 @@ import { CouponModule } from './coupon/coupon.module';
 import { OrderModule } from './order/order.module';
 import { StripeModule } from './stripe/stripe.module';
 import { RazorpayModule } from './razorpay/razorpay.module';
+import { AccessControlModule } from 'nest-access-control';
+import { roles } from './auth/user.roles';
+import { ScheduleModule } from '@nestjs/schedule';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -45,6 +49,9 @@ import { RazorpayModule } from './razorpay/razorpay.module';
     OrderModule,
     StripeModule,
     RazorpayModule,
+    AccessControlModule.forRoles(roles),
+    ScheduleModule.forRoot(),
+    NotificationModule
   ],
   controllers: [AppController],
   providers: [AppService],

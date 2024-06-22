@@ -7,6 +7,14 @@ import mongoose, { Connection, Model } from 'mongoose';
 import { FeedbackService } from 'src/feedback/feedback.service';
 import { Feedback } from 'src/feedback/schemas/feedback.schema';
 import { ConfigService } from '@nestjs/config';
+import { Cron } from '@nestjs/schedule';
+import * as dotenv from 'dotenv';
+const getCronInterval = () => {
+
+  dotenv.config();
+  return process.env.CRON_TIME
+};
+
 
 
 
@@ -20,7 +28,7 @@ export class PetPoojaService {
     try {
       const sanitizedQuery = query.trim();
 
-      if (sanitizedQuery.length < 4) {
+      if (sanitizedQuery.length < 3) {
         return []
       }
 
@@ -133,6 +141,14 @@ export class PetPoojaService {
       categories: categories,
       items: items
     }
+  }
+
+
+  @Cron(getCronInterval())
+  async handleCron() {
+    const data = await this.fetchMenu();
+    this.updateDatabase(data)
+    return "updated"
   }
   async updateDatabase(data: any) {
     try {

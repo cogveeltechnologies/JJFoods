@@ -16,6 +16,11 @@ export class RazorpayController {
     return this.razorpayService.fetchPaymentById(body)
   }
 
+  @Post('handleFailure')
+  async handleFailure(@Body() body) {
+    return this.razorpayService.handleFailure(body)
+  }
+
   @Post('/fetchOrderById')
   async fetchOrderById(@Body() body) {
 

@@ -58,27 +58,32 @@ export class RazorpayService {
   };
 
   async fetchPaymentById(body) {
-    console.log("fetch payment by id body", body)
+    console.log("fetch payment is called-----------------------------------", body)
+
+
+    // console.log("fetch payment by id body", body)
     var instance = new Razorpay({
       key_id: this.configService.get<string>('RAZORPAY_ID'),
       key_secret: this.configService.get<string>('RAZORPAY_SECRET'),
     })
     // return await instance.payments.fetch(body.rPaymentId)
 
-    const { orderId, rPaymentId, rSignature, rOrderId } = body
+    const { orderId, rSignature, rOrderId } = body
     const saltSaved = await this.saltModel.findOne({ orderId: body.orderId })
     const saltOrRounds = 10;
     const order = await this.orderModel.findById(body.orderId)
     const password = order.grandTotal + orderId
     // const hash = await bcrypt.hash(password, saltOrRounds);
-    console.log("saltsaved", saltSaved.salt)
+    // console.log("saltsaved", saltSaved.salt)
     // console.log("hash", hash)
 
     const isMatch = await bcrypt.compare(password, saltSaved.salt);
-    console.log(isMatch)
+    // console.log(isMatch)
 
     // if (saltSaved.salt !== hash) {
     //   throw new Error('Invalid Password 1')
+    // }sage: 'error' }
+
     // }
     if (!isMatch) {
       throw new Error('Invalid Password 2')
@@ -87,7 +92,12 @@ export class RazorpayService {
 
 
 
+    // if (!body.rPaymentId) {
+    //   order.state = 'cancelled';
+    //   await order.save();
+    //   return { mes
 
+    const { rPaymentId } = body
 
 
 
@@ -140,7 +150,7 @@ export class RazorpayService {
 
       }
       const petPoojaOrder = await this.petPoojaService.saveOrder(petPoojaOrderBody)
-      console.log(petPoojaOrder)
+      // console.log(petPoojaOrder)
 
       // console.log(petPoojaOrder.restID)
 
@@ -179,7 +189,7 @@ export class RazorpayService {
     }
 
     //change order status
-    order.state = "processing"
+    // order.state = "processing"
 
     //razorpay 
     //save razorpay details in order 
@@ -193,6 +203,28 @@ export class RazorpayService {
 
 
     return { error: "error" }
+
+  }
+
+
+  async handleFailure(body) {
+    console.log("handle failure is called-----------------------------------", body)
+    const order = await this.orderModel.findById(body.orderId)
+
+
+    order.state = "cancelled";
+
+    if (body.rOrderId) {
+      order.payment.orderId = body.rOrderId;
+      order.payment.paymentId = body.rPaymentId;
+      order.payment.signature = body?.rSignature;
+      order.payment.reason = body?.reason;
+    }
+
+    await order.save()
+    return { message: "error" }
+
+
 
   }
 

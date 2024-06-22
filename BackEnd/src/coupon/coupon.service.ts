@@ -6,6 +6,7 @@ import { Coupon } from './schemas/coupon.schema';
 import { Used } from './schemas/used.schema';
 import { Cart } from 'src/cart/schemas/cart.schema';
 import { CartService } from '../cart/cart.service';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class CouponService {
@@ -14,11 +15,20 @@ export class CouponService {
     @InjectModel(Used.name) private usedModel: Model<Used>,
     @InjectModel(Cart.name) private cartModel: Model<Cart>,
     @Inject(CartService)
-    private readonly cartService: CartService) { }
+    private readonly cartService: CartService,
+    @Inject(NotificationService)
+    private readonly notificationService: NotificationService) { }
 
 
   async createCoupon(body) {
     const coupon = new this.couponModel(body);
+    const notificationBody = {
+      title: body.title,
+      body: body.description,
+      data: body.code
+    }
+    await this.notificationService.sendPushNotificationsToUsers(notificationBody)
+
     return coupon.save();
   }
   async decreaseUsage(body) {

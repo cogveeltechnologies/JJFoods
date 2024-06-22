@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './schemas/user.schema';
 import { Model } from 'mongoose';
@@ -13,6 +13,7 @@ import { Address } from './schemas/address.schema';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { NotFoundError } from 'rxjs';
+import { CartService } from 'src/cart/cart.service';
 const admin = require("../utils/firebase/firebaseInit")
 const axios = require('axios');
 @Injectable()
@@ -22,7 +23,9 @@ export class AuthService {
     @InjectModel(Address.name) private addressModel: Model<Address>,
     private readonly mailerService: MailerService,
     private readonly httpService: HttpService,
-    private configService: ConfigService) {
+    private configService: ConfigService,
+    @Inject(forwardRef(() => CartService))
+    private readonly cartService: CartService,) {
 
   }
   bucket = admin.storage().bucket();
@@ -155,7 +158,14 @@ export class AuthService {
     // Return the validation code
     return validationCode;
   }
+  superAdminLogin(body) {
+    if (body.username == 'husban' && body.password == 'nissarhusban') {
+      return 'login'
+    }
 
+    return 'error'
+
+  }
   async adminSignupOtp(signupOtpDto) {
     try {
       const existingUserByEmail = await this.userModel.findOne({
@@ -443,10 +453,12 @@ export class AuthService {
         name: signupDto.name,
         emailId: signupDto.emailId,
         phoneNumber: signupDto.phoneNumber,
+        deviceToken: signupDto?.deviceToken
       });
 
       // Save the user to the database
       await createdUser.save();
+      await this.cartService.bulkAddCart({ userId: createdUser._id, products: signupDto?.products })
       return createdUser;
     } catch (error) {
       // Handle errors
@@ -519,6 +531,8 @@ export class AuthService {
       if ((!userOtp) || (userOtp.otp !== loginDto.otp)) {
         throw new HttpException('Invalid OTP', HttpStatus.BAD_REQUEST);
       }
+      user.deviceToken = loginDto?.deviceToken;
+      await user.save()
 
       return user;
     } catch (error) {
@@ -749,6 +763,39 @@ export class AuthService {
       return await this.getAddresses(userId);
     } catch (error) {
       throw new HttpException(`Failed to delete address: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async searchAddress(userId, query) {
+    try {
+      // Trim and sanitize the query string
+      const sanitizedQ = query.trim();
+      const sanitizedQuery = sanitizedQ.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+
+      // Define the search keyword conditionally based on the sanitized query
+      const keyword = sanitizedQuery ? {
+        $or: [
+          { name: { $regex: sanitizedQuery, $options: 'i' } },
+          { address1: { $regex: sanitizedQuery, $options: 'i' } },
+          { address2: { $regex: sanitizedQuery, $options: 'i' } },
+          { address3: { $regex: sanitizedQuery, $options: 'i' } },
+          { addressType: { $regex: sanitizedQuery, $options: 'i' } }
+        ]
+      } : {};
+
+      // Combine the userId condition with the keyword search
+      const searchCriteria = {
+        user: userId,
+        ...keyword
+      };
+
+      // Execute the query
+      const result = await this.addressModel.find(searchCriteria).exec();
+      return result;
+    } catch (error) {
+      // Handle errors appropriately
+      // console.error('Error executing search query:', error);
+      return [];
     }
   }
 

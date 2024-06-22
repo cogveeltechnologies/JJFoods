@@ -11,6 +11,47 @@ export class CartService {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Cart.name) private cartModel: Model<Cart>
   ) { }
+  async bulkAddCart(body) {
+    const { userId, products } = body;
+
+    // Find the cart for the user
+    let cart = await this.cartModel.findOne({ user: userId });
+
+    if (!cart) {
+      // Create a new cart if it doesn't exist
+      cart = new this.cartModel({
+        user: userId,
+        cartItems: [],
+      });
+    }
+
+    for (const product of products) {
+      const { itemId, quantity } = product;
+
+      // Find the index of the product in the cart if it exists
+      const productIndex = cart.cartItems.findIndex(
+        (item) => item.product.itemId == itemId
+      );
+
+      if (productIndex !== -1) {
+        // Update the quantity of the existing product
+        cart.cartItems[productIndex].quantity += quantity;
+      } else {
+        // Add the new product to the cart
+        cart.cartItems.push({
+          user: userId,
+          product: { itemId },
+          quantity,
+        });
+      }
+    }
+
+    // Save the updated cart
+    await cart.save();
+
+    // Return the updated cart
+    return await this.getUserCart(userId, undefined);
+  }
 
   async addCart(body) {
     // console.log(body)
