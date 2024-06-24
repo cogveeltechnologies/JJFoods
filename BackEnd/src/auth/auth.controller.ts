@@ -70,7 +70,7 @@ export class AuthController {
   }
 
   @Post('/login')
-  login(@Body() loginDto: LoginDto) {
+  login(@Body() loginDto) {
     return this.authService.login(loginDto);
   }
 
