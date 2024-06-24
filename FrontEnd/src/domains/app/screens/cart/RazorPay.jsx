@@ -10,36 +10,40 @@ import { useAppSelector } from '../../../../store/hooks'
 import { useCreateOrderMutation } from './api/createOrder'
 import { Colors } from '../../../../theme/Colors'
 import RazorpayCheckout from 'react-native-razorpay'
+import { useRazorPayConfirmationMutation } from './api/razorPayConfirmation'
 
 
-const fetchOrderId = async (amount) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}create-order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount,
-        currency: 'INR',
-        receipt: 'helloThere'
-      }),
-    });
+// const fetchOrderId = async (amount) => {
+//   try {
+//     const response = await fetch(`${API_BASE_URL}create-order`, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         amount,
+//         currency: 'INR',
+//         receipt: 'helloThere'
+//       }),
+//     });
 
-    const data = await response.json();
-    return data.id;
-  } catch (error) {
-    console.error(error);
-    throw new Error('Failed to create order');
-  }
-};
+//     const data = await response.json();
+//     return data.id;
+//   } catch (error) {
+//     console.error(error);
+//     throw new Error('Failed to create order');
+//   }
+// };
 
 const RazorPay = () => {
 
   const userDetails = useAppSelector((state) => state.persistedReducer.userDetailsSlice.userDetails);
   const orderPreference = useAppSelector((state) => state.persistedReducer.orderPreferenceSlice.orderPreference)
+  const deliveryAddressId = useAppSelector((state) => state.persistedReducer.deliveryAddressIdSlice.deliveryAddressId)
   const userId = userDetails?._id;
   const [createOrder, { isLoading: createOrderLoading, isError: createOrderIsError, isSuccess: createOrderSuccess, error: createOrderError }] = useCreateOrderMutation();
+
+  const [razorPayConfirmation, { isLoading, data, error }] = useRazorPayConfirmationMutation();
 
   const handlePayNowButtonPress = async () => {
     const orderData = {
@@ -50,53 +54,53 @@ const RazorPay = () => {
       payment: {
         paymentId: '',
         paymentMethod: 'online',
-      }
+      },
     };
+
     try {
       // Creating Order First  
       const response = await createOrder(orderData).unwrap();
+      const options = { ...response, theme: { color: Colors.primary } };
 
-      // console.log(response, "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrr")
-      // const options = {
-      //   description: 'Credits towards consultation',
-      //   // image: user?.imageFile,
-      //   currency: 'INR',
-      //   key: 'rzp_test_gYwgZTvcv9nNAh', // Use your public key ID here
-      //   amount: amount * 100, // amount in paise
-      //   name: "JJFoods",
-      //   order_id: orderId, // use the order ID from your server
-      //   prefill: {
-      //     email: '',
-      //     contact: user?.phoneNumber,
-      //     name: user?.name,
-      //   },
-      //   theme: { color: Colors.primary }
-      // };
-
-      const options = { ...response, theme: { color: Colors.primary } }
-      console.log(options, 'ooooooooooooooooooooooooooooooooooooooooo')
-
+      // Calling RazorPay Gateway 
       RazorpayCheckout.open(options).then(async (data) => {
-        console.log(data, "RazorPay ---------------------------------")
-        Toast.show({
-          type: 'success',
-          text1: 'Payment Successful',
-          text2: `Payment ID: ${data.razorpay_payment_id}`
-        })
+        console.log(data, "RazorPay ---------------------------------");
+
+        // Ensure razorpay_payment_id is defined
+        const razorpay_payment_id = data.razorpay_payment_id;
+        if (!razorpay_payment_id) {
+          throw new Error('razorpay_payment_id is missing');
+        }
+
+        // Calling Confirmation API 
+        const result = await razorPayConfirmation({
+          orderId: response?.order,
+          rPaymentId: razorpay_payment_id,
+          rSignature: data.razorpay_signature,
+          rOrderId: data.razorpay_order_id,
+        }).unwrap();
+
+        console.log(result, "Confirmation Result ---------------------------------");
 
       }).catch((error) => {
+        console.log(error, "Razorpay Error ---------------------------------");
+        // Display Toast for Payment Failed
         Toast.show({
           type: 'error',
           text1: 'Payment Failed',
-          text2: `Error: ${error.code} | ${error.description}`
-        })
-        console.log(error, "razorpay error")
-        // setPaymentData(error)
+          text2: `Error: ${error.code} | ${error.description}`,
+        });
       });
     } catch (error) {
       console.log('Error', error.message);
+      Toast.show({
+        type: 'error',
+        text1: 'Order Creation Failed',
+        text2: `Error: ${error.message}`,
+      });
     }
   };
+
 
 
 
@@ -144,7 +148,7 @@ const RazorPay = () => {
                 size={dimensions.vw * 3.8}
               />
             </View>
-            <Text style={[textVariants.textSubHeading, { color: Colors.black, width: dimensions.vw * 65, }]}>Pay with UPI, Net Banking, Debit, Credit Card</Text>
+            <Text style={[textVariants.textSubHeading, { color: Colors.black, width: dimensions.vw * 65, }]}>Pay Now</Text>
           </View>
           <Icon
             source={require('../../../../../assets/images/rightArrow.png')}

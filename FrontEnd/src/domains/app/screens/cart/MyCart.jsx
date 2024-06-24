@@ -50,13 +50,15 @@ const MyCart = () => {
 
   const [createOrder, { isLoading: createOrderLoading, isError: createOrderIsError, isSuccess: createOrderSuccess, error: createOrderError }] = useCreateOrderMutation();
 
+
+
   const [visible, setVisible] = useState(false)
 
 
   // useEffect(() => {
   //   // dispatch(setCartItems(data))
-  //   console.log(data, "----------------data")
-  //   console.log(cartItems, "----------------cartItems")
+  //   // console.log(data, "----------------data")
+  //   // console.log(cartItems, "----------------cartItems")
   // }, [])
 
 
@@ -280,7 +282,7 @@ const MyCart = () => {
                 <View style={{ marginTop: 36 }}>
                   <Text style={textVariants.textHeading}>Bill Statement</Text>
                   <CCard style={{ marginHorizontal: 0, marginTop: 18, marginBottom: 20 }}>
-                    <BillStatement />
+                    <BillStatement data={cartItems} />
                   </CCard>
                 </View>
 

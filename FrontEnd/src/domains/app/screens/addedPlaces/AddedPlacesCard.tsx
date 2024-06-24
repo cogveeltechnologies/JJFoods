@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import CCard from '../../../../components/CCard';
 import { ActivityIndicator, Icon, IconButton, RadioButton } from 'react-native-paper';
@@ -9,11 +9,11 @@ import { useDefaultAddedPlaceMutation } from './apis/changeDefaultPlaces';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { useGetAllAddedPlacesQuery } from './apis/getAllAddedPlaces';
 import { setDeliveryAddressId } from '../cart/slices/deliveryAddressIdSlice';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useDeleteAddressMutation } from './apis/deleteAddress';
+import Toast from 'react-native-toast-message';
 
 interface AddedPlacesCardProps {
-  handleEdit: (id: string) => void;
-  handleDelete: (id: string) => void;
   handleSelect?: (item: AddressItem) => void;
 }
 
@@ -27,15 +27,21 @@ interface AddressItem {
   isDefault: boolean;
 }
 
-const AddedPlacesCard: React.FC<AddedPlacesCardProps> = ({ handleEdit, handleDelete, handleSelect }) => {
+
+const AddedPlacesCard: React.FC<AddedPlacesCardProps> = ({ handleSelect }) => {
   const userDetails = useAppSelector((state) => state.persistedReducer.userDetailsSlice.userDetails);
   const userId = userDetails?._id;
+  const navigation = useNavigation<any>()
+
   const { data, isLoading, isError, isSuccess, refetch } = useGetAllAddedPlacesQuery({ userId }, {
     refetchOnMountOrArgChange: true,
     refetchOnReconnect: true,
     refetchOnFocus: true,
   });
+
   const [mutate, { isLoading: mutateLoading, isError: mutateError, error: mutateErrorData }] = useDefaultAddedPlaceMutation();
+
+  const [deleteAddress, { isLoading: isDeleteLoading, isSuccess: isDeleteSuccess, isError: isDeleteError, error: deleteError }] = useDeleteAddressMutation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checked, setChecked] = useState<string | null>(null);
   const [savedPlaces, setSavedPlaces] = useState([])
@@ -46,7 +52,7 @@ const AddedPlacesCard: React.FC<AddedPlacesCardProps> = ({ handleEdit, handleDel
     if (data) {
       setSavedPlaces(data);
     }
-  }, [data,]);
+  }, [data]);
 
   useFocusEffect(
     useCallback(() => {
@@ -67,19 +73,54 @@ const AddedPlacesCard: React.FC<AddedPlacesCardProps> = ({ handleEdit, handleDel
 
   const handleRadioPress = async (addressId: string) => {
     try {
-      // console.log(addressId, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
       const response = await mutate({ addressId, userId });
       setSavedPlaces(response.data);
       setSelectedId(addressId);
       setChecked(addressId);
       dispatch(setDeliveryAddressId(addressId));
-      // console.log(addressIdDelivery, 'iddddddddddiddddddddddddddddddddddd')
       if (handleSelect) handleSelect(response.data.find(address => address._id === addressId) || null);
     } catch (error) {
       console.error('Error fetching new address details:', error);
     }
   };
 
+  const handleEdit = (item: any) => {
+    console.log(item, 'Edit')
+    navigation.navigate("UpdateAddress", { item })
+  };
+
+  const handleDelete = (id: string) => {
+    Alert.alert(
+      'Confirm Deletion',
+      'Are you sure you want to delete this address?',
+      [
+        {
+          text: 'Cancel',
+          onPress: () => console.log('Deletion cancelled'),
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              const response = await deleteAddress({ id, userId }).unwrap();
+              setSavedPlaces(response)
+              // console.log('Address deleted successfully:-------', response);
+              Toast.show({
+                type: 'error',
+                text1: 'Deleted',
+                text2: 'Address Deleted 👋',
+              });
+            } catch (error) {
+              console.error('Failed to delete address:', error);
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+      { cancelable: false }
+    );
+  };
 
 
 
@@ -101,8 +142,6 @@ const AddedPlacesCard: React.FC<AddedPlacesCardProps> = ({ handleEdit, handleDel
     }
 
     const isSelected = item._id === selectedId;
-
-
 
 
     return (
@@ -136,7 +175,7 @@ const AddedPlacesCard: React.FC<AddedPlacesCardProps> = ({ handleEdit, handleDel
                     icon={require('../../../../../assets/images/editIcon.png')}
                     iconColor={Colors.primary}
                     size={dimensions.vw * 3.7}
-                    onPress={() => handleEdit(item._id)}
+                    onPress={() => handleEdit(item)}
                     style={{ margin: 0 }}
                   />
                   <IconButton
@@ -200,11 +239,13 @@ const AddedPlacesCard: React.FC<AddedPlacesCardProps> = ({ handleEdit, handleDel
 
 
   return (
-    <FlatList
-      data={[...savedPlaces].sort((a, b) => (b.isDefault ? 1 : -1))}
-      renderItem={renderItem}
-      keyExtractor={(item) => item._id}
-    />
+    <>
+      <FlatList
+        data={[...savedPlaces].sort((a, b) => (b.isDefault ? 1 : -1))}
+        renderItem={renderItem}
+        keyExtractor={(item) => item._id}
+      />
+    </>
   );
 };
 

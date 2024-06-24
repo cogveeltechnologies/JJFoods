@@ -1,15 +1,24 @@
 import { FlatList, ImageBackground, ScrollView, StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { moderateScale } from 'react-native-size-matters'
 import { Colors } from '../../../../../theme/Colors'
 import CButton from '../../../../../components/CButton'
-import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import dimensions from '../../../../../theme/Dimensions'
 import OrderedProductList from './OrderedProductList'
+import { useAllRunningOrdersMutation } from './apis/allRunningOrders'
+import { useAppSelector } from '../../../../../store/hooks'
 
 const background = require("../../../../../../assets/images/fullbackground.png")
 
 const OrderHistory = () => {
+
+  const [allRunningOrders, { data, error, isLoading, refetch }] = useAllRunningOrdersMutation();
+  const state = 'history'
+  const userDetails = useAppSelector((state) => state.persistedReducer.userDetailsSlice.userDetails);
+  const userId = userDetails?._id
+  const [orderDetails, setOrderDetails] = useState([])
+
   const productData = [
     {
       id: 1,
@@ -41,10 +50,35 @@ const OrderHistory = () => {
 
 
   ];
+
   const navigation = useNavigation()
   const goToHome = () => {
     navigation.navigate('Home')
   }
+
+
+
+  const fetchOrders = async () => {
+    console.log(userId);
+    try {
+      const response = await allRunningOrders({ userId, state });
+      setOrderDetails(response.data);
+      // console.log(response.data, "RRRRRRRRRRRRRRRRRRRrrr");
+      console.log(orderDetails, "RRRRRRRRRRRRRRRRRRRrrr");
+    } catch (err) {
+      console.error('Failed to fetch running orders:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [userId, state, allRunningOrders]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [])
+  );
 
 
 

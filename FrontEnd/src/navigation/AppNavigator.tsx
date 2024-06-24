@@ -19,6 +19,8 @@ import MyProfile from '../domains/app/screens/profile/MyProfile'
 import OtpScreen from '../domains/auth/screens/otpScreen/OtpScreen'
 import AuthTabNavigator from './AuthTabNavigator'
 import SignUpScreen from '../domains/auth/screens/singUpScreen/SignUpScreen'
+import UpdateAddress from '../domains/app/screens/addressDetails/UpdateAddress'
+import FullOrderDetails from '../domains/app/screens/myOrders/FullOrderDetails'
 
 const AppNavigator = () => {
 
@@ -102,6 +104,17 @@ const AppNavigator = () => {
         name='AddressDetails'
         component={AddressDetails}
         options={{ headerTitle: 'Address Details' }}
+      />
+
+      <Stack.Screen
+        name='UpdateAddress'
+        component={UpdateAddress}
+        options={{ headerTitle: 'Update Address' }}
+      />
+      <Stack.Screen
+        name='FullOrderDetails'
+        component={FullOrderDetails}
+        options={{ headerTitle: '' }}
       />
 
       {/* <Stack.Screen

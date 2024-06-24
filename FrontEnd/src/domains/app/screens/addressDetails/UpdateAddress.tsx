@@ -1,21 +1,21 @@
 import { ImageBackground, ScrollView, StyleSheet, Text, View, Alert } from 'react-native';
-import React, { useState } from 'react';
-import { textVariants } from '../../../../theme/StyleVarients';
-import LinearHeader from '../../../../components/LinearHeader';
-import CCard from '../../../../components/CCard';
-import CButton from '../../../../components/CButton';
-import { Colors } from '../../../../theme/Colors';
-import { moderateScale } from 'react-native-size-matters';
-import { SpacedInput } from '../profile/MyProfile';
-import { ActivityIndicator, TextInput } from 'react-native-paper';
-import dimensions from '../../../../theme/Dimensions';
+import React, { useEffect, useState } from 'react';
 import * as Yup from 'yup';
 import { ValidationError } from 'yup';
-import { useAddNewAddressMutation } from './apis/addNewAddress';
-import { useAppSelector } from '../../../../store/hooks';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAppSelector } from '../../../../store/hooks';
+import LinearHeader from '../../../../components/LinearHeader';
+import CCard from '../../../../components/CCard';
+import { textVariants } from '../../../../theme/StyleVarients';
+import dimensions from '../../../../theme/Dimensions';
+import CButton from '../../../../components/CButton';
+import { Colors } from '../../../../theme/Colors';
+import { SpacedInput } from '../profile/MyProfile';
+import { ActivityIndicator, TextInput } from 'react-native-paper';
+import { moderateScale } from 'react-native-size-matters';
 import { useEditAddressDetailsMutation } from './apis/editAddressDetails';
+
 
 
 interface FormData {
@@ -33,12 +33,14 @@ interface Errors {
   address3?: string;
 }
 
-const AddressDetails: React.FC = () => {
-  const userDetails = useAppSelector((state) => state.persistedReducer.userDetailsSlice.userDetails);
-  const userId = userDetails?._id;
+const UpdateAddress: React.FC = () => {
+  const route = useRoute();
+  const { item } = route.params;
   const background = require("../../../../../assets/images/fullbackground.png");
-  const [addNewAddress, { isLoading, isSuccess, isError, error }] = useAddNewAddressMutation();
   const navigation = useNavigation()
+  // const userDetails = useAppSelector((state) => state.persistedReducer.userDetailsSlice.userDetails);
+  const [updateAddress, { isLoading, isSuccess, isError, error }] = useEditAddressDetailsMutation();
+  // const userId = userDetails?._id;
   const [selectedType, setSelectedType] = useState<string>('Home');
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -48,6 +50,19 @@ const AddressDetails: React.FC = () => {
     address3: ''
   });
   const [errors, setErrors] = useState<Errors>({});
+
+  useEffect(() => {
+    if (item) {
+      setFormData({
+        name: item.name || '',
+        phoneNumber: item.phoneNumber.toString() || '',
+        address1: item.address1 || '',
+        address2: item.address2 || '',
+        address3: item.address3 || ''
+      });
+    }
+  }, [item]);
+
   const validationSchema = Yup.object().shape({
     name: Yup.string().required('Name is required'),
     phoneNumber: Yup.string()
@@ -67,30 +82,26 @@ const AddressDetails: React.FC = () => {
     });
   };
 
-  const handleSubmit = async () => {
+  const handleUpdate = async () => {
     try {
       await validationSchema.validate(formData, { abortEarly: false });
 
       const addressData = {
+        id: item._id,
         name: formData.name,
         phoneNumber: parseInt(formData.phoneNumber, 10),
         address1: formData.address1,
         address2: formData.address2,
         address3: formData.address3,
         addressType: selectedType,
-        user: userId, // replace with actual userId
-        isDefault: true, // change based on your requirement
+        isDefault: true,
       };
-      // console.log(addressData, "dddddddddddddddd")
-      const response = await addNewAddress(addressData).unwrap();
-      // console.log('Address added successfully:', response);
+      const response = await updateAddress(addressData).unwrap();
       Toast.show({
         type: 'success',
         text1: 'Added',
         text2: 'Added Successfully  👋',
       });
-
-
       setFormData({
         name: '',
         phoneNumber: '',
@@ -99,8 +110,7 @@ const AddressDetails: React.FC = () => {
         address3: ''
       });
       setErrors({});
-      navigation.navigate("ManualLocationScreen")
-
+      navigation.navigate("AddedPlaces")
     } catch (err) {
       if (err instanceof ValidationError) {
         const validationErrors: Errors = {};
@@ -131,7 +141,7 @@ const AddressDetails: React.FC = () => {
         <View style={{ flex: 1, marginTop: 35, marginHorizontal: 16, justifyContent: 'space-between' }}>
 
           <CCard style={{ marginHorizontal: 0, paddingBottom: 50 }}>
-            <Text style={[textVariants.textSubHeading, { fontSize: dimensions.vw * 3.5, paddingStart: 15 }]}>Save address as</Text>
+            <Text style={[textVariants.textSubHeading, { fontSize: dimensions.vw * 3.5, paddingStart: 15 }]}>Update Address</Text>
             <View style={styles.buttonContainer}>
               {['Home', 'Work', 'Hotel', 'Other'].map(type => (
                 <CButton
@@ -238,7 +248,7 @@ const AddressDetails: React.FC = () => {
             {isLoading ? (
               <ActivityIndicator animating={true} color={Colors.primary} size={50} />
             ) : (
-              <CButton label='Save Address' mode='contained' onPress={handleSubmit} />
+              <CButton label='Update Address' mode='contained' onPress={handleUpdate} />
             )}
           </View>
 
@@ -249,7 +259,7 @@ const AddressDetails: React.FC = () => {
   )
 }
 
-export default AddressDetails
+export default UpdateAddress
 
 const styles = StyleSheet.create({
   logoBackground: {

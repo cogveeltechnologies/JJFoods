@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import CCard from '../../../../../components/CCard';
 import { textVariants } from '../../../../../theme/StyleVarients';
@@ -27,6 +27,16 @@ const OrderedProductList = ({ item }: any) => {
     }
     setIsVisible(!isVisible)
   }
+
+
+
+  useEffect(() => {
+    console.log(item, 'iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiitem')
+
+  }, [])
+
+
+
 
 
   return (
