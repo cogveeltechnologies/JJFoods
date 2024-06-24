@@ -7,10 +7,11 @@ import { CouponSchema } from './schemas/coupon.schema';
 import { UsedSchema } from './schemas/used.schema';
 import { CartModule } from 'src/cart/cart.module';
 import { Cart, CartSchema } from 'src/cart/schemas/cart.schema';
+import { NotificationModule } from 'src/notification/notification.module';
 
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: 'User', schema: UserSchema }, { name: 'Coupon', schema: CouponSchema }, { name: 'Used', schema: UsedSchema }, { name: 'Cart', schema: CartSchema }]), CartModule],
+  imports: [MongooseModule.forFeature([{ name: 'User', schema: UserSchema }, { name: 'Coupon', schema: CouponSchema }, { name: 'Used', schema: UsedSchema }, { name: 'Cart', schema: CartSchema }]), CartModule, NotificationModule],
   providers: [CouponService],
   controllers: [CouponController],
   exports: [CouponService]

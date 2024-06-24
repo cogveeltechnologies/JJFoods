@@ -7,6 +7,7 @@ export class OrderController {
 
   @Get('admin/details')
   async getDetails() {
+    console.log("called")
     const details = await this.orderService.getDetails();
     return details
 

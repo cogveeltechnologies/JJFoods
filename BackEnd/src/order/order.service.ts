@@ -89,9 +89,11 @@ export class OrderService {
 
     return {
       today,
-      onDelivery: onDeliveryCount,
-      delivered: completedCount,
-      cancelled: cancelledCount
+      data: [
+        { value: onDeliveryCount, label: "On Delivery", id: 0, color: "#2A1A0B" },
+        { value: completedCount, label: "Delivered", id: 1, color: "#B76F00" },
+        { value: cancelledCount, label: "Cancelled", id: 2, color: "#999898" }
+      ]
     };
   }
   async getDetails() {
@@ -103,18 +105,47 @@ export class OrderService {
 
     const completedOrdersArr = await this.orderModel.find({ state: 'completed' }).exec();
     const completedOrders = completedOrdersArr.length
-    const revenue = completedOrdersArr.reduce((sum, order) => sum + order.grandTotal, 0);
+    const revenue = (completedOrdersArr.reduce((sum, order) => sum + order.grandTotal, 0)) / 1000;
     const customersArr = await this.userModel.find({ isActive: true })
     const customers = customersArr.length;
+    const revenueGraph = await this.getRevenueGraph();
+    const orderData = [{ data: totalOrders, title: "Orders", id: 0 }, { data: revenue, title: "Revenue", id: 1 }, { data: customers, title: "Customers", id: 2 }, { data: completedOrders, title: "Completed \nOrders", id: 3 }]
+    const todayData = await this.findOrdersByTimePeriod('today')
 
-
-    return { totalOrders, revenue, completedOrders, customers }
+    return { orderData, revenueGraph, todayData: todayData.data, today: todayData.today }
   }
+  async getRevenueGraph() {
+    const orders = await this.orderModel.find({ state: 'completed' }).exec();
 
+    const monthlyRevenue = Array(12).fill(0);
+
+    orders.forEach(order => {
+      const month = new Date(order.createdAt).getMonth();
+      monthlyRevenue[month] += order.grandTotal;
+    });
+
+    const data = [
+      { value: monthlyRevenue[0] / 1000, label: 'Jan' },
+      { value: monthlyRevenue[1] / 1000, label: 'Feb' },
+      { value: monthlyRevenue[2] / 1000, label: 'Mar' },
+      { value: monthlyRevenue[3] / 1000, label: 'Apr' },
+      { value: monthlyRevenue[4] / 1000, label: 'May' },
+      { value: monthlyRevenue[5] / 1000, label: 'Jun' },
+      { value: monthlyRevenue[6] / 1000, label: 'Jul' },
+      { value: monthlyRevenue[7] / 1000, label: 'Aug' },
+      { value: monthlyRevenue[8] / 1000, label: 'Sep' },
+      { value: monthlyRevenue[9] / 1000, label: 'Oct' },
+      { value: monthlyRevenue[10] / 1000, label: 'Nov' },
+      { value: monthlyRevenue[11] / 1000, label: 'Dec' },
+    ];
+
+    return data;
+  }
   async createOrder(body) {
     const { userId, orderPreference } = body;
     if (!userId) {
       console.log("user id not found")
+      return { message: "error" }
     }
     const { couponId } = body.discount;
 
@@ -356,6 +387,11 @@ export class OrderService {
   async getOrdersByCustomerId(userId, state) {
     // const response = await this.orderModel.find({ user: userId, state: state }).exec();
     // return response;
+    await this.orderModel.updateMany(
+      { "payment.paymentMethod": "online", "payment.status": false, user: userId },
+      { $set: { state: "cancelled" } }
+    );
+
     let queryStates;
     if (state === 'running') {
       queryStates = ['processing', 'ready', 'on the way', 'pending'];

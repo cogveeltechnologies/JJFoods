@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
@@ -9,6 +9,8 @@ import { AuthController } from './auth.controller';
 import { User, UserSchema } from './schemas/user.schema';
 import { Address, AddressSchema } from './schemas/address.schema';
 import { SignupOtp, SignupOtpSchema } from './schemas/signupOtp.schema';
+import { CartModule } from '../cart/cart.module';
+import { CartSchema } from 'src/cart/schemas/cart.schema';
 
 @Module({
   imports: [
@@ -18,6 +20,7 @@ import { SignupOtp, SignupOtpSchema } from './schemas/signupOtp.schema';
       { name: User.name, schema: UserSchema },
       { name: Address.name, schema: AddressSchema },
       { name: SignupOtp.name, schema: SignupOtpSchema },
+      { name: "Cart", schema: CartSchema }
     ]),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
@@ -31,7 +34,9 @@ import { SignupOtp, SignupOtpSchema } from './schemas/signupOtp.schema';
         },
       }),
       inject: [ConfigService],
+
     }),
+    forwardRef(() => CartModule)
   ],
   providers: [AuthService],
   controllers: [AuthController],
