@@ -1,7 +1,7 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Order } from './schemas/order.schema';
-import { Connection, Model } from 'mongoose';
+import mongoose, { Connection, Model } from 'mongoose';
 import { Cart } from 'src/cart/schemas/cart.schema';
 import { CartService } from 'src/cart/cart.service';
 import { Coupon } from 'src/coupon/schemas/coupon.schema';
@@ -12,6 +12,7 @@ import { PetPoojaService } from 'src/pet-pooja/pet-pooja.service';
 import { RazorpayService } from 'src/razorpay/razorpay.service';
 import { ConfigService } from '@nestjs/config';
 import { FeedbackService } from 'src/feedback/feedback.service';
+const { ObjectId } = require('mongodb');
 
 @Injectable()
 export class OrderService {
@@ -30,6 +31,65 @@ export class OrderService {
     @Inject(forwardRef(() => FeedbackService)) private feedbackService: FeedbackService) { }
 
   //admin
+
+  async getAdminOrdersByState(state) {
+
+
+
+    let queryStates;
+    if (state === 'Processing') {
+      queryStates = ['processing'];
+    }
+    else if (state == 'OnTheWay') {
+      queryStates = ['ready', 'on the way']
+    }
+    else if (state == 'Pending') {
+      queryStates = ['pending']
+    } else if (state === 'Completed') {
+      queryStates = ['completed'];
+    }
+    else if (state == 'Cancelled') {
+      queryStates = ['cancelled']
+    } else {
+      // If the state doesn't match 'running' or 'history', return an empty array or handle accordingly
+      return [];
+    }
+
+    // Query the database with the mapped states
+    const orders = await this.orderModel.find({ state: { $in: queryStates } }).exec();
+    // return response;
+    for (const order of orders) {
+
+
+
+      const addressComplete = await this.addressModel.findOne({ _id: order.address })
+      console.log(order.address, addressComplete)
+      if (addressComplete) {
+        order.address = addressComplete
+      }
+      for (const product of order.products) {
+
+        const item = await this.connection.db.collection('items').findOne({ itemid: product.itemId });
+
+
+        if (item) {
+          product.details = item
+
+        }
+        // const rating = await this.feedbackService.getOrderItemRating({ orderId: order._id, itemId: product.itemId })
+        // console.log(rating)
+        // if (rating) {
+        //   product.details.rating = rating;
+        // } else {
+        //   product.details.rating = 0
+        // }
+
+
+      }
+    }
+    // console.log(orders)
+    return orders;
+  }
   async findOrdersByTimePeriod(period: 'today' | 'week' | 'month') {
     let startDate: Date;
     let endDate: Date;
@@ -82,19 +142,21 @@ export class OrderService {
     endDate = new Date();
     endDate.setHours(23, 59, 59, 999)
 
-    const today = await this.orderModel.countDocuments({
+    const todaysOrders = await this.orderModel.countDocuments({
       createdAt: { $gte: startDate, $lte: endDate },
       state: { $in: ['pending', 'processing', 'ready', 'on the way'] }
     }).exec();
 
-    return {
-      today,
+    const obj = {
+      todaysOrders,
       data: [
         { value: onDeliveryCount, label: "On Delivery", id: 0, color: "#2A1A0B" },
         { value: completedCount, label: "Delivered", id: 1, color: "#B76F00" },
         { value: cancelledCount, label: "Cancelled", id: 2, color: "#999898" }
       ]
     };
+
+    return obj
   }
   async getDetails() {
 
@@ -112,7 +174,7 @@ export class OrderService {
     const orderData = [{ data: totalOrders, title: "Orders", id: 0 }, { data: revenue, title: "Revenue", id: 1 }, { data: customers, title: "Customers", id: 2 }, { data: completedOrders, title: "Completed \nOrders", id: 3 }]
     const todayData = await this.findOrdersByTimePeriod('today')
 
-    return { orderData, revenueGraph, todayData: todayData.data, today: todayData.today }
+    return { orderData, revenueGraph, todayData: todayData.data, todaysOrders: todayData.todaysOrders }
   }
   async getRevenueGraph() {
     const orders = await this.orderModel.find({ state: 'completed' }).exec();
@@ -318,9 +380,17 @@ export class OrderService {
     }
 
   }
+  async getAllOrders() {
+    return await this.orderModel.find()
+  }
+
 
   async updateOrderState(orderId: string, newState: string) {
-    return this.orderModel.findByIdAndUpdate(orderId, { state: newState, updatedAt: Date.now() }, { new: true }).exec();
+    const order = await this.orderModel.findOne({ _id: orderId });
+    const stateShow = order.state;
+    await this.orderModel.findByIdAndUpdate(orderId, { state: newState, updatedAt: Date.now() }, { new: true }).exec();
+    return this.getAdminOrdersByState(stateShow)
+    // return this.getAllOrders()
   }
 
   async updateOrderStateCod(orderId: string) {

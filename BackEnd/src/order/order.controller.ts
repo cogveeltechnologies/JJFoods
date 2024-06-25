@@ -5,27 +5,43 @@ import { OrderService } from './order.service';
 export class OrderController {
   constructor(private readonly orderService: OrderService) { }
 
+  @Get('admin/orders/:state')
+  async getAdminOrdersByState(@Param('state') state) {
+    console.log(state)
+    const res = await this.orderService.getAdminOrdersByState(state)
+    return res
+
+  }
+  @Get('admin/getAllOrders')
+  async getAllOrders() {
+    return this.orderService.getAllOrders()
+  }
+
+
   @Get('admin/details')
   async getDetails() {
     console.log("called")
     const details = await this.orderService.getDetails();
+    // console.log(details)
     return details
 
   }
   @Get('admin/getOrders/:period')
   async getOrdersByPeriod(@Param('period') period: 'today' | 'week' | 'month') {
     console.log(period)
-    return this.orderService.findOrdersByTimePeriod(period);
+    const res = await this.orderService.findOrdersByTimePeriod(period);
+    console.log(res)
+    return res
   }
 
   @Post('/createOrder')
   async createOrder(@Body() body) {
-    console.log("order:---------------------------", body)
+    console.log("order body:---------------------------", body)
     return this.orderService.createOrder(body);
   }
 
   @Put('state/:orderId')
-  async updateOrderState(@Param('orderId') orderId: string, @Body('state') state: string) {
+  async updateOrderState(@Param('orderId') orderId: string, @Body() state: string) {
     return this.orderService.updateOrderState(orderId, state);
   }
   @Put('state/cod/:orderId')
