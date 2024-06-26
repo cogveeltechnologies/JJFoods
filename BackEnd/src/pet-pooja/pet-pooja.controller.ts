@@ -6,13 +6,13 @@ export class PetPoojaController {
 
   constructor(private readonly petPoojaService: PetPoojaService) { }
   @Get('menu')
-  fetchMenu() {
+  fetchMenu(): any {
     console.log("request")
     return this.petPoojaService.menu()
   }
 
   @Get('fetchMenu')
-  hello() {
+  async hello(): Promise<any> {
     return this.petPoojaService.menu()
   }
 
@@ -33,7 +33,7 @@ export class PetPoojaController {
     }
   }
   @Get('search')
-  async search(@Query('q') q) {
+  async search(@Query('q') q): Promise<any> {
     return this.petPoojaService.searchItems(q);
   }
 
